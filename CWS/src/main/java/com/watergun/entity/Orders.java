@@ -1,0 +1,28 @@
+package com.watergun.entity;
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+@Data
+@TableName("orders")
+@AllArgsConstructor
+@NoArgsConstructor
+public class Orders {
+    @TableId(type = IdType.ASSIGN_ID)
+    private Long orderId;
+
+    private Long userId;
+    private BigDecimal totalAmount;
+    private String status;
+    private String paymentMethod;
+    private String shippingInfo;
+
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
+}

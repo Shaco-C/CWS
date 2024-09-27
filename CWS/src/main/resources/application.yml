@@ -1,0 +1,25 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: "CWS"
+  datasource:
+    url: jdbc:mysql://localhost:3306/crossworldshop
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+
+mybatis-plus:
+  type-aliases-package: com.watergun.entity
+  base-package: com.watergun.mapper
+
+redis:
+  host: localhost
+  port: 6379
+
+cache:
+  type: redis
+
+jwt:
+  secret: ${env.jwt.secret}
