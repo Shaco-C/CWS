@@ -9,4 +9,5 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RequestMapping("/merchant-application")
 public class MerchantApplicationController {
+
 }

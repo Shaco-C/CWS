@@ -27,21 +27,6 @@ public class UsersController {
     private JwtUtil jwtUtil;
 
 
-    @GetMapping("/page")
-    public R<Page> page(int page, int pageSize, String role){
-        log.info("分页查询请求");
-        log.info("page = {}, pageSize = {}, role = {}",page,pageSize,role);
-        Page pageInfo = new Page(page,pageSize);
-        log.info("查看Users表信息");
-        LambdaQueryWrapper<Users> lambdaQueryWrapper = new LambdaQueryWrapper();
-        lambdaQueryWrapper.like(StringUtils.isNotEmpty(role),Users::getRole,role);
-        lambdaQueryWrapper.orderByDesc(Users::getUpdatedAt);
-
-        userService.page(pageInfo,lambdaQueryWrapper);
-
-        return  R.success(pageInfo);
-    }
-
     @GetMapping("/{id}")
     public R<Users> getUserById(@PathVariable Long id) {
 

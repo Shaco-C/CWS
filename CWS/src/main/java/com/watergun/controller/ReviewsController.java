@@ -28,20 +28,6 @@ public class ReviewsController {
     @Autowired
     private JwtUtil jwtUtil;
 
-
-    //展示所有评论，按照status进行分类，如果前端没传默认查询所有的评论  (对管理员)
-    @GetMapping("/admin/page")
-    public R<Page> page(int page, int pageSize, String status){
-        log.info("page: {}, pageSize: {}, status: {}", page, pageSize, status);
-        Page pageInfo = new Page(page,pageSize);
-        log.info("查看评论");
-        LambdaQueryWrapper<Reviews> reviewsLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        reviewsLambdaQueryWrapper.like(StringUtils.isNotEmpty(status),Reviews::getStatus,status)
-                .orderByDesc(Reviews::getUpdatedAt); //按照时间排序
-        reviewService.page(pageInfo,reviewsLambdaQueryWrapper);
-        return R.success(pageInfo);
-    }
-
     //用户发表评论
     @PostMapping
     public R<String> createReview(HttpServletRequest request, @RequestBody Reviews review) {
@@ -127,34 +113,6 @@ public class ReviewsController {
         reviewService.removeById(id);
 
         return R.success("评论删除成功");
-    }
-
-    // 审核评论（通过或拒绝）
-    @PutMapping("/admin/reviewStatus/{id}")
-    public R<String> reviewStatus(@PathVariable Long id, @RequestParam String status, HttpServletRequest request) {
-        // 从请求头中获取 JWT token
-        String token = request.getHeader("Authorization").replace("Bearer ", "");
-        log.info("token: {}", token);
-        // 提取 JWT 中的用户角色
-        String userRole = jwtUtil.extractRole(token);
-        log.info("userRole: {}", userRole);
-
-        // 检查用户是否是管理员
-        if (!"admin".equals(userRole)) {
-            return R.error("你无权进行审核操作");
-        }
-
-        // 根据评论ID获取评论详情
-        Reviews review = reviewService.getById(id);
-        if (review == null) {
-            return R.error("评论不存在");
-        }
-
-        // 更新评论状态
-        review.setStatus(status);
-        reviewService.updateById(review);
-
-        return R.success("评论状态更新为: " + status);
     }
 
 
