@@ -29,6 +29,7 @@ public class UsersController {
 
     @GetMapping("/page")
     public R<Page> page(int page, int pageSize, String role){
+        log.info("分页查询请求");
         log.info("page = {}, pageSize = {}, role = {}",page,pageSize,role);
         Page pageInfo = new Page(page,pageSize);
         log.info("查看Users表信息");
@@ -43,6 +44,7 @@ public class UsersController {
 
     @GetMapping("/{id}")
     public R<Users> getUserById(@PathVariable Long id) {
+
         log.info("查询id为:"+id+"的用户");
         return R.success(userService.getById(id));
     }
@@ -116,6 +118,7 @@ public class UsersController {
 
     @PostMapping("/logout")
     public R<String> logout(HttpServletRequest request) {
+        log.info("退出登录");
         // 清除Session中存储的用户ID
         request.getSession().removeAttribute("UserId");
 
