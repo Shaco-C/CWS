@@ -3,6 +3,7 @@ package com.watergun.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
+import com.watergun.dto.ReviewDTO;
 import com.watergun.entity.Products;
 import com.watergun.entity.Reviews;
 import com.watergun.service.ProductService;
@@ -29,11 +30,11 @@ public class ProductsController {
 
     @Autowired
     private JwtUtil jwtUtil;
-    //展示产品通过审核的评论
+    //展示产品通过审核的评论(之后需要整合到ProductDTO中，显示在产品详情中去)
     @GetMapping("/reviews/{productId}")
-    public R<List<Reviews>> getApprovedReviewsByProduct(@PathVariable Long productId) {
+    public R<List<ReviewDTO>> getApprovedReviewsByProductId(@PathVariable Long productId) {
         log.info("productId: {}", productId);
-        List<Reviews> approvedReviews = reviewService.getApprovedReviewsByProductId(productId);
+        List<ReviewDTO> approvedReviews = reviewService.getApprovedReviewsByProductId(productId);
         log.info("approvedReviews: {}", approvedReviews);
         return R.success(approvedReviews);
     }
