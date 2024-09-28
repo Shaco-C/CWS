@@ -7,7 +7,6 @@ import com.watergun.entity.Reviews;
 import com.watergun.service.AIReviewLogService;
 import com.watergun.service.ReviewService;
 import com.watergun.utils.JwtUtil;
-import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -115,5 +114,29 @@ public class ReviewsController {
         return R.success("评论删除成功");
     }
 
+
+
+    //用户可以查询自己发表过的所有评论
+    @GetMapping("/user/page")
+    public R<Page> userReviewPage(int page,int pageSize,HttpServletRequest request){
+        // 从请求头中获取 JWT token
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        log.info("token: {}", token);
+
+        // 提取 JWT 中的用户 ID
+        Long userId = jwtUtil.extractUserId(token);
+
+        log.info("userId: {}的用户查询自己发送的所有评论", userId);
+
+        // 根据用户ID分页查询评论
+        LambdaQueryWrapper<Reviews> reviewsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        reviewsLambdaQueryWrapper.eq(Reviews::getUserId, userId)
+                .orderByDesc(Reviews::getCreatedAt);
+
+        Page pageInfo = new Page(page,pageSize);
+        reviewService.page(pageInfo,reviewsLambdaQueryWrapper);
+
+        return R.success(pageInfo);
+    }
 
 }

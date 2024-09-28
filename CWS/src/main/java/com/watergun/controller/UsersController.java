@@ -1,12 +1,12 @@
 package com.watergun.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
+import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
+import com.watergun.service.MerchantApplicationService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
-import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +24,9 @@ public class UsersController {
     private UserService userService;
 
     @Autowired
+    private MerchantApplicationService merchantApplicationService;
+
+    @Autowired
     private JwtUtil jwtUtil;
 
 
@@ -34,6 +37,7 @@ public class UsersController {
         return R.success(userService.getById(id));
     }
 
+    //注册用户
     @PostMapping
     public R<String> createUser(@RequestBody Users user) {
         log.info("创建用户:"+user.toString());
@@ -72,6 +76,30 @@ public class UsersController {
         return R.success("User deleted successfully");
     }
 
+
+    //用户申请成为商家
+    @PostMapping("/merchantApplication")
+    public R<String> merchantApplication(HttpServletRequest request, @RequestBody MerchantApplication merchantApplication){
+        log.info("用户申请成为商家:"+merchantApplication.toString());
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+
+        Long UserId = jwtUtil.extractUserId(token);
+        log.info("当前用户id为:{}",UserId);
+
+        String userRole = jwtUtil.extractRole(token);
+        log.info("当前用户角色为:{}",userRole);
+
+        if (!userRole.equals("user")){
+            return R.error("管理员或商家不能够申请成为商家");
+        }
+
+        merchantApplication.setStatus("pending");
+        merchantApplication.setUserId(UserId);
+        merchantApplicationService.save(merchantApplication);
+        return R.success("申请提交成功");
+
+    }
+
     @PostMapping("/login")
     public R<String> login(HttpServletRequest request, @RequestBody Users user) {
         log.info("请求登陆的user信息为",user);
@@ -108,9 +136,6 @@ public class UsersController {
         request.getSession().removeAttribute("UserId");
 
         // 这里可以考虑实现JWT黑名单机制，记录当前用户的Token，阻止其再次使用
-
         return R.success("Successfully logged out");
     }
-
-
 }

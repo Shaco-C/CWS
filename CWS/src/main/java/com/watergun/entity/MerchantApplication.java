@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("merchant_application")
+@TableName("merchant_applications")
 @AllArgsConstructor
 @NoArgsConstructor
 public class MerchantApplication {
