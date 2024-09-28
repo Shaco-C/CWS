@@ -51,7 +51,16 @@ public class UsersController {
     }
 
     @PutMapping
-    public R<String> updateUser(@RequestBody Users user) {
+    public R<String> updateUser(HttpServletRequest request, @RequestBody Users user) {
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        log.info("当前token为:{}",token);
+        Long UserId =  jwtUtil.extractUserId(token);
+        log.info("当前用户id为:{}",UserId);
+        String UserRole = jwtUtil.extractRole(token);
+        log.info("当前用户角色为:{}",UserRole);
+        if (!UserRole.equals("admin") &&!UserId.equals(user.getUserId())){
+            return R.error("没有权限修改用户");
+        }
         log.info("更新用户:"+user.toString());
         userService.updateById(user);
         return R.success("User updated successfully");

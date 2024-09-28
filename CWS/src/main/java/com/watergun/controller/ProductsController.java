@@ -88,4 +88,6 @@ public class ProductsController {
         return R.success(pageInfo);
     }
 
+    //当用户点击产品时,显示产品的详细信息页面，包括产品图片、产品名称、产品描述、产品价格、产品库存、产品评论等
+
 }
