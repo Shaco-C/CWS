@@ -78,7 +78,7 @@ public class UsersController {
         String UserRole = jwtUtil.extractRole(token);
         log.info("当前用户角色为:{}",UserRole);
 
-        if (!UserRole.equals("admin") || !(UserId == id)){
+        if (!UserRole.equals("admin") &&!UserId.equals(id)){
             return R.error("没有权限删除用户");
         }
         userService.removeById(id);
