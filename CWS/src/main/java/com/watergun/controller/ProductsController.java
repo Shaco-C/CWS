@@ -3,9 +3,12 @@ package com.watergun.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
+import com.watergun.dto.ProductDTO;
 import com.watergun.dto.ReviewDTO;
+import com.watergun.entity.Merchants;
 import com.watergun.entity.Products;
 import com.watergun.entity.Reviews;
+import com.watergun.service.MerchantService;
 import com.watergun.service.ProductService;
 import com.watergun.service.ReviewService;
 import com.watergun.utils.JwtUtil;
@@ -24,6 +27,8 @@ public class ProductsController {
 
     @Autowired
     private ProductService productService;
+    @Autowired
+    private MerchantService merchantService;
 
     @Autowired
     private ReviewService reviewService;
@@ -90,5 +95,22 @@ public class ProductsController {
     }
 
     //当用户点击产品时,显示产品的详细信息页面，包括产品图片、产品名称、产品描述、产品价格、产品库存、产品评论等
+    @GetMapping("/{id}")
+    public R<ProductDTO> getProductDetiails(@PathVariable Long id){
+        log.info("正在看产品详情，id为{}",id);
+        Products products = productService.getById(id);
+        if (products == null) {
+            return R.error("商品下架了");
+        }
+        Merchants merchants = merchantService.getById(products.getMerchantId());
+        ProductDTO productDTO = new ProductDTO(products);
+        productDTO.setShopName(merchants.getShopName());
+        productDTO.setAddress(merchants.getAddress());
+        productDTO.setShopAvatarUrl(merchants.getShopAvatarUrl());
+        //获取该产品的所有评论
+        productDTO.setReviewsList(reviewService.getApprovedReviewsByProductId(id));
 
+        return R.success(productDTO);
+
+    }
 }

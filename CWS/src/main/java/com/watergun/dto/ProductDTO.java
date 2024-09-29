@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -17,4 +19,7 @@ public class ProductDTO  extends Products {
     private String shopAvatarUrl;
     private List<ReviewDTO> reviewsList;
 
+    public ProductDTO(Products products) {
+        super(products.getProductId(), products.getMerchantId(), products.getName(), products.getDescription(), products.getPrice(), products.getStock(), products.getCategoryId(), products.getImageUrl(), products.getSales(), products.getStatus(),products.getCreatedAt() , products.getUpdatedAt());
+    }
 }
