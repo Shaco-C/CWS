@@ -12,6 +12,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class AIReviewLogServiceImpl extends ServiceImpl<AIReviewLogsMapper, AIRe
     @Resource
     private OllamaChatModel ollamaChatModel;
 
+    @Lazy
     @Autowired
     private ReviewService reviewService;
 
