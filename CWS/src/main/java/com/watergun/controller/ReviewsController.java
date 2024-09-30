@@ -20,12 +20,6 @@ public class ReviewsController {
     @Autowired
     private ReviewService reviewService;
 
-    @Autowired
-    private AIReviewLogService aiReviewLogService;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
     //用户发表评论
     @PostMapping
     public R<String> createReview(HttpServletRequest request, @RequestBody Reviews review) {
