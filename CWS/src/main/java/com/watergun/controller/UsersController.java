@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
-import com.watergun.service.MerchantApplicationService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,9 +21,6 @@ public class UsersController {
 
     @Autowired
     private UserService userService;
-
-    @Autowired
-    private MerchantApplicationService merchantApplicationService;
 
     @Autowired
     private JwtUtil jwtUtil;
