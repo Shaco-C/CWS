@@ -17,6 +17,5 @@ public class Favorites {
     private Long userId;
     private Long productId;
 
-    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }
