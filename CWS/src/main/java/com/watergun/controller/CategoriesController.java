@@ -15,11 +15,6 @@ public class CategoriesController {
     @Autowired
     private CategoryService categoryService;
 
-//    @GetMapping
-//    public R<List<Categories>> getAllCategories() {
-//        return R.success(categoryService.getAllCategories());
-//    }
-
     @PostMapping
     public R<String> createCategory(@RequestBody Categories category) {
 

@@ -6,6 +6,7 @@ import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
 import com.watergun.mapper.UsersMapper;
+import com.watergun.service.CartService;
 import com.watergun.service.MerchantApplicationService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 ;import java.util.Collections;
 import java.util.List;
 
@@ -24,6 +26,9 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
 
     @Autowired
     private MerchantApplicationService merchantApplicationService;
+
+    @Autowired
+    private CartService cartService;
 
 
     @Override
@@ -39,6 +44,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     }
 
     @Override
+    @Transactional
     public R<String> createUser(Users user) {
         log.info("调用创建用户请求");
         log.info("user: {}", user);
@@ -48,6 +54,8 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         password= passwordEncoder.encode(password);
         user.setPassword(password);
         this.save(user);
+        //为用户添加购物车模块
+        cartService.firstCreateCart(user.getUserId());
         return R.success("创建用户成功");
     }
 
@@ -73,6 +81,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     }
 
     @Override
+    @Transactional
     public R<String> deleteUser(String token, Long userId) {
         log.info("调用删除用户请求");
         log.info("token: {}", token);
@@ -84,6 +93,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         }
         log.info("删除用户:{}",userId);
         this.removeById(userId);
+        cartService.removeCartByUserId(userId);
         return R.success("删除用户成功");
     }
 

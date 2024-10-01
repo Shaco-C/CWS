@@ -16,7 +16,6 @@ import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 
 @Service
@@ -80,7 +79,6 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     }
 
     //当用户点击产品时,显示产品的详细信息页面，包括产品图片、产品名称、产品描述、产品价格、产品库存、产品评论等
-    @Transactional
     @Override
     public R<ProductDTO> getProductDetiails(Long id) {
         log.info("getProductDetiails method is called");
