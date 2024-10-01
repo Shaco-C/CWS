@@ -1,10 +1,14 @@
 package com.watergun.controller;
 
 import com.watergun.common.R;
+import com.watergun.dto.ProductDTO;
 import com.watergun.entity.Cart;
 import com.watergun.service.CartService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/cart")
@@ -13,20 +17,12 @@ public class CartController {
     @Autowired
     private CartService cartService;
 
-//    @GetMapping("/{userId}")
-//    public R<Cart> getCartByUserId(@PathVariable Integer userId) {
-//        return R.success(cartService.getCartByUserId(userId));
-//    }
+    @GetMapping
+    public R<List<ProductDTO>> getCart(HttpServletRequest request) {
+        // 从请求头中获取 JWT
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
 
-    @PostMapping
-    public R<String> createCart(@RequestBody Cart cart) {
+        return cartService.getCartList(token);
 
-        return R.success("success");
-    }
-
-    @DeleteMapping("/{userId}")
-    public R<String> deleteCart(@PathVariable Integer userId) {
-
-        return R.success("success");
     }
 }
