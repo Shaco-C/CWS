@@ -13,6 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProductDTO  extends Products {
+    private Integer quantity;
     private String shopName;
     private String address;
     private String shopAvatarUrl;
