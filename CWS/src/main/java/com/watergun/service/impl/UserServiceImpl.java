@@ -45,6 +45,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         return list(queryWrapper); // 使用 MyBatis-Plus 的 list 方法来批量查询
     }
 
+    //注册用户
     @Override
     @Transactional
     public R<String> createUser(Users user) {
@@ -61,6 +62,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         return R.success("创建用户成功");
     }
 
+    //用户更新自己的信息
     @Override
     public R<String> updateUser(String token, Users user) {
         log.info("调用更新用户请求");
@@ -82,6 +84,8 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         return R.success("更新用户成功");
     }
 
+
+    //删除用户 or 用户注销账号
     @Override
     @Transactional
     public R<String> deleteUser(String token, Long userId) {
@@ -99,7 +103,9 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         return R.success("删除用户成功");
     }
 
+    //用户申请成为商家
     @Override
+    @Transactional
     public R<String> merchantApplication(String token, MerchantApplication merchantApplication) {
         log.info("调用商家申请请求");
         log.info("token: {}", token);

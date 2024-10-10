@@ -26,7 +26,7 @@ public class ReviewsController {
         return reviewService.createReview(token, review);
     }
 
-    // 更新评论  通过评论的id
+    // 更新评论
     @PutMapping("/{reviewId}")
     public R<String> updateReview(@PathVariable Long reviewId, @RequestBody Reviews reviewDetails, HttpServletRequest request) {
         // 从请求头中获取 JWT token
