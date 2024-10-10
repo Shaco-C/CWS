@@ -17,6 +17,7 @@ public class Products {
     @TableId(type = IdType.ASSIGN_ID)
     private Long productId;
 
+    private Boolean isActive;
     private Long merchantId;
     private String name;
     private String description;

@@ -16,6 +16,10 @@ public class Orders {
 
     private Long userId;
     private BigDecimal totalAmount;
+    private BigDecimal taxAmount;
+    private BigDecimal shippingFee;
+
+    private String currency;
     private String status;
     private String paymentMethod;
     private String shippingInfo;

@@ -119,24 +119,35 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         Map<Long, Merchants> merchantsMap = merchantService.listByIds(merchantIds).stream()
                 .collect(Collectors.toMap(Merchants::getMerchantId, merchants -> merchants));
 
-        // 将商品信息与商家信息组合成 ProductDTO，并且设置数量
-        List<ProductDTO> productDTOList = productsList.stream().map(products -> {
-            ProductDTO productDTO = new ProductDTO(products);
+        // 检查商品是否存在并且是否有效
+        List<ProductDTO> productDTOList = new ArrayList<>();
+        for (CartItems cartItem : cartItems) {
+            Products product = productsList.stream()
+                    .filter(p -> p.getProductId().equals(cartItem.getProductId()))
+                    .findFirst()
+                    .orElse(null);
 
-            // 设置商品数量
-            Integer quantity = productQuantityMap.get(products.getProductId());
-            productDTO.setQuantity(quantity);
+            if (product == null || !product.getIsActive()) {
+                // 商品已下架或删除，添加相应提示
+                ProductDTO productDTO = new ProductDTO();
+                productDTO.setProductId(cartItem.getProductId());
+                productDTO.setMessage("商品已下架或已删除");
+                productDTOList.add(productDTO);
+            } else {
+                // 正常商品
+                ProductDTO productDTO = new ProductDTO(product);
+                productDTO.setQuantity(productQuantityMap.get(product.getProductId()));
 
-            // 设置商家信息
-            Merchants merchants = merchantsMap.get(products.getMerchantId());
-            if (merchants != null) {
-                productDTO.setAddress(merchants.getAddress());
-                productDTO.setShopName(merchants.getShopName());
-                productDTO.setShopAvatarUrl(merchants.getShopAvatarUrl());
+                // 设置商家信息
+                Merchants merchants = merchantsMap.get(product.getMerchantId());
+                if (merchants != null) {
+                    productDTO.setAddress(merchants.getAddress());
+                    productDTO.setShopName(merchants.getShopName());
+                    productDTO.setShopAvatarUrl(merchants.getShopAvatarUrl());
+                }
+                productDTOList.add(productDTO);
             }
-
-            return productDTO;
-        }).toList();
+        }
 
         return R.success(productDTOList);
     }
@@ -168,6 +179,13 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
             return R.error("用户不存在");
         }
 
+        // 检查商品是否下架
+        Products product = productService.getById(cartItems.getProductId());
+        if (product == null || !product.getIsActive()) {
+            return R.error("商品已下架或不存在，无法添加到购物车");
+        }
+
+        // 获取用户的购物车
         LambdaQueryWrapper<Cart> cartLambdaQueryWrapper = new LambdaQueryWrapper<>();
         cartLambdaQueryWrapper.eq(Cart::getUserId, userId);
         Cart cart = this.getOne(cartLambdaQueryWrapper);
@@ -196,6 +214,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
         return R.success("添加成功");
     }
+
 
     //将商品从购物车中去除
     @Override

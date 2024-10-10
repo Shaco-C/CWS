@@ -18,8 +18,9 @@ public class ProductDTO  extends Products {
     private String address;
     private String shopAvatarUrl;
     private List<ReviewDTO> reviewsList;
+    private String message;
 
     public ProductDTO(Products products) {
-        super(products.getProductId(), products.getMerchantId(), products.getName(), products.getDescription(), products.getPrice(), products.getStock(), products.getCategoryId(), products.getImageUrl(), products.getSales(), products.getStatus(),products.getCreatedAt() , products.getUpdatedAt());
+        super(products.getProductId(), true,products.getMerchantId(), products.getName(), products.getDescription(), products.getPrice(), products.getStock(), products.getCategoryId(), products.getImageUrl(), products.getSales(), products.getStatus(),products.getCreatedAt() , products.getUpdatedAt());
     }
 }
