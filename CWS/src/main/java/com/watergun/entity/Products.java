@@ -23,7 +23,7 @@ public class Products {
     private String description;
     private BigDecimal price;
     private Integer stock;
-    private Integer categoryId;
+    private Long categoryId;
     private String imageUrl;
     private Integer sales;
     private String status; //'pending', 'approved', 'rejected'

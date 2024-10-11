@@ -28,6 +28,8 @@ public class AdminController {
     @Autowired
     private MerchantApplicationService merchantApplicationService;
     @Autowired
+    private CategoryService categoryService;
+    @Autowired
     private JwtUtil jwtUtil;
 
     //管理员查看所有用户请求
@@ -78,6 +80,32 @@ public class AdminController {
         productService.page(pageInfo, productsLambdaQueryWrapper);
         return R.success(pageInfo);
     }
+
+    //管理员分页查询所有分类标签
+    @GetMapping("/categories/page")
+    public R<Page> categoriesPage(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(value = "parentId", required = false) Long parentId) {
+
+        log.info("分页查询请求");
+        log.info("page = {}, pageSize = {}, parentId = {}", page, pageSize, parentId);
+
+        Page<Categories> pageInfo = new Page<>(page, pageSize);
+
+        LambdaQueryWrapper<Categories> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+
+        // 如果传递了 parentId，过滤对应的类别
+        if (parentId != null) {
+            lambdaQueryWrapper.eq(Categories::getParentId, parentId);
+        }
+
+        lambdaQueryWrapper.orderByDesc(Categories::getCreatedAt);
+
+        categoryService.page(pageInfo, lambdaQueryWrapper);
+        return R.success(pageInfo);
+    }
+
 
     // 管理员分页查询用户申请成为商家的申请
     @GetMapping("/merchantApplication/page")
