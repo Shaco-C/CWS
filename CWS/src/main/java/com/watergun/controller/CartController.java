@@ -43,4 +43,7 @@ public class CartController {
 
         return cartService.deleteProductFromCartItem(token, cartItemId);
     }
+
+    //用户购买购物车中的商品，一次性全买下
+
 }

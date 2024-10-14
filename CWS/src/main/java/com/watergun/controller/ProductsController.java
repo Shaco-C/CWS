@@ -66,6 +66,4 @@ public class ProductsController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return productService.getMyProducts(page,pageSize,token,sortField,sortOrder);
     }
-
-    //用户购买产品
 }

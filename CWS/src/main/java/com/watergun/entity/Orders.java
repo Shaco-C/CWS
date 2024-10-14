@@ -21,6 +21,7 @@ public class Orders {
 
     private String currency;
     private String status;
+    private String returnStatus;
     private String paymentMethod;
     private String shippingInfo;
 

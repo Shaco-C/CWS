@@ -1,8 +1,10 @@
 package com.watergun.controller;
 
 import com.watergun.common.R;
+import com.watergun.dto.ShopDTO;
 import com.watergun.entity.Merchants;
 import com.watergun.service.MerchantService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,21 +17,28 @@ public class MerchantsController {
     @Autowired
     private MerchantService merchantService;
 
-    @PostMapping
-    public R<String> createMerchant(@RequestBody Merchants merchant) {
-
-        return R.success("Merchant created successfully");
+    //修改商店信息
+    @PutMapping("/update")
+    public R<String> updateMerchant(HttpServletRequest request, @RequestBody Merchants merchants){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return merchantService.updateMerchant(token,merchants);
     }
 
-    @PutMapping("/{id}")
-    public R<String> updateMerchant(@PathVariable Integer id, @RequestBody Merchants merchant) {
-
-        return R.success("Merchant updated successfully");
+    //获取商店详情信息,商店的主页面
+    @GetMapping("/getMerchants/{merchantId}")
+    public R<ShopDTO> getMerchant(@PathVariable Long merchantId){
+        return merchantService.getMerchantInfo(merchantId);
     }
 
-    @DeleteMapping("/{id}")
-    public R<String> deleteMerchant(@PathVariable Integer id) {
+    //注销商店，成为普通用户（需要提前把商品删除干净，钱包提取干净，才可以注销）
 
-        return R.success("Merchant deleted successfully");
-    }
+    //查看商店自己的订单
+
+    //查看商店特定日期范围的营业额
+
+    //提现钱包中的钱
+
+    //处理退货请求
+
+    //待确认金额转为确认金额
 }

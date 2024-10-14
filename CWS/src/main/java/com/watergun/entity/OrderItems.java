@@ -17,6 +17,7 @@ public class OrderItems {
     private Long orderId;
     private Long productId;
     private Integer quantity;
+    private String returnStatus;
     private BigDecimal price;
 
 }
