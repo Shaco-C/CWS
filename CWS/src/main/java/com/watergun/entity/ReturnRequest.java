@@ -1,8 +1,6 @@
 package com.watergun.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,8 +25,8 @@ public class ReturnRequest {
     private String returnReason; // 退货原因
 
     private String status; // 退货申请状态 ('pending', 'approved', 'rejected')
-
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt; // 申请创建时间
-
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt; // 更新时间
 }
