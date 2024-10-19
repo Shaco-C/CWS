@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,12 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     @Autowired
     @Lazy
     private OrderItemsService orderItemsService;
+
+    @Autowired
+    private BankAccountsService bankAccountsService;
+
+    @Autowired
+    private WithdrawalRecordsService withdrawalRecordsService;
 
     @Override
     public R<String> updateMerchant(String token, Merchants merchants) {
@@ -230,8 +237,8 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
     @Override
     @Transactional
-    public R<String> withdraw(String token , BigDecimal amount)  {
-        log.info("withdraw方法: token: {}, amount: {}", token, amount);
+    public R<String> withdrawApplication(String token, BigDecimal amount, Long bankAccountId) {
+        log.info("withdraw方法: token: {}, amount: {}, bankAccountId: {}", token, amount, bankAccountId);
 
         // 校验用户身份
         String userRole = jwtUtil.extractRole(token);
@@ -247,7 +254,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
             return R.error("提现金额不合法");
         }
 
-        // 检查提现金额是否过大（可选，具体根据业务规则）
+        // 检查提现金额是否过大
         BigDecimal maxWithdrawLimit = new BigDecimal("10000.00"); // 假设最大一次提现上限为10000
         if (amount.compareTo(maxWithdrawLimit) > 0) {
             log.warn("withdraw方法: 提现金额超过最大限制");
@@ -268,16 +275,77 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
             return R.error("商家余额不足");
         }
 
-        // 更新余额并保存
+        // 校验银行账户是否存在
+        BankAccounts bankAccount = bankAccountsService.getById(bankAccountId);
+        if (bankAccount == null || !bankAccount.getUserId().equals(userId)) {
+            log.warn("withdraw方法: 银行账户不存在或不属于当前商家");
+            return R.error("无效的银行账户");
+        }
+
+        // 记录提现申请，状态为 pending
+        WithdrawalRecords withdrawalRecord = new WithdrawalRecords();
+        withdrawalRecord.setMerchantId(userId);
+        withdrawalRecord.setAmount(amount);
+        withdrawalRecord.setStatus("pending"); // 初始状态为 pending
+        withdrawalRecord.setBankAccountId(bankAccountId);
+        withdrawalRecord.setCurrency("CNY"); // 根据需求动态设定货币类型
+        withdrawalRecord.setRequestTime(LocalDateTime.now());
+
+        boolean recordSaved = withdrawalRecordsService.save(withdrawalRecord);
+        if (!recordSaved) {
+            log.warn("withdraw方法: 提现记录保存失败");
+            return R.error("提现申请失败");
+        }
+
+        // 扣除余额并更新商家信息
         merchants.setWalletBalance(walletBalance.subtract(amount));
-        boolean result = this.updateById(merchants);
-        if (!result) {
-            log.warn("withdraw方法: 提现失败");
+        boolean merchantUpdated = this.updateById(merchants);
+        if (!merchantUpdated) {
+            log.warn("withdraw方法: 提现失败，余额更新错误");
             return R.error("提现失败");
         }
 
-        log.info("withdraw方法: 提现成功，剩余余额: {}", merchants.getWalletBalance());
-        return R.success("提现成功，剩余余额: " + merchants.getWalletBalance());
+        // 提交异步处理提现请求
+        withdrawalRecordsService.processWithdrawAsync(withdrawalRecord);
+
+        log.info("withdraw方法: 提现申请成功，剩余余额: {}", merchants.getWalletBalance());
+        return R.success("提现申请成功，剩余余额: " + merchants.getWalletBalance());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public R<Page> getWithdrawApplications(int page, int pageSize, String token, String status) {
+        log.info("getWithdrawApplications方法: page: {}, pageSize: {}, token: {}, status: {}", page, pageSize, token, status);
+
+        // 校验用户身份
+        try {
+            String userRole = jwtUtil.extractRole(token);
+            Long userId = jwtUtil.extractUserId(token);
+
+            log.info("getWithdrawApplications方法: userRole: {}, userId: {}", userRole, userId);
+            if (!"merchant".equals(userRole)) {
+                log.warn("getWithdrawApplications方法: 非法用户角色尝试获取提现申请");
+                return R.error("只有商家角色可以获取提现申请");
+            }
+
+            // 创建查询条件
+            LambdaQueryWrapper<WithdrawalRecords> queryWrapper = new LambdaQueryWrapper<>();
+            queryWrapper.eq(WithdrawalRecords::getMerchantId, userId)
+                    .eq(StringUtils.isNotEmpty(status), WithdrawalRecords::getStatus, status)
+                    .orderByDesc(WithdrawalRecords::getRequestTime); // 按申请时间倒序排列
+
+            // 执行分页查询
+            Page<WithdrawalRecords> pageInfo = new Page<>(page, pageSize);
+            pageInfo = withdrawalRecordsService.page(pageInfo, queryWrapper);
+
+            log.info("getWithdrawApplications方法: 查询成功，结果数量: {}", pageInfo.getRecords().size());
+            return R.success(pageInfo);
+        } catch (Exception e) {
+            log.error("getWithdrawApplications方法: 查询提现申请时发生错误", e);
+            return R.error("获取提现申请失败，请稍后重试");
+        }
+    }
+
+
 
 }

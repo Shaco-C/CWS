@@ -46,14 +46,25 @@ public class MerchantsController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return merchantService.getOrders(page,pageSize,token,status,return_status);
     }
+
+    //申请提现钱包中的钱
+    @PutMapping("/withdraw")
+    public R<String> withdraw(HttpServletRequest request,@RequestParam BigDecimal amount,@RequestParam Long bankAccountId){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return merchantService.withdrawApplication(token, amount,bankAccountId);
+    }
+
+    //查看商店的提现记录
+    @GetMapping
+    public R<Page> getWithdrawApplications(@RequestParam(value = "page", defaultValue = "1") int page,
+                             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+                             HttpServletRequest request, String status){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return merchantService.getWithdrawApplications(page,pageSize,token,status);
+    }
+
     //查看商店特定日期范围的营业额
 
-    //提现钱包中的钱
-    @PutMapping("/withdraw")
-    public R<String> withdraw(HttpServletRequest request, BigDecimal amount){
-        String token = request.getHeader("Authorization").replace("Bearer ", "");
-        return merchantService.withdraw(token, amount);
-    }
     //处理退货请求
 
     //待确认金额转为确认金额

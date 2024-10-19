@@ -15,5 +15,7 @@ public interface MerchantService extends IService<Merchants> {
     R<String> deleteMerchant(String token);
     R<Page> getOrders(int page,int pageSize,String token,String status,String returnStatus);
 
-    R<String> withdraw(String token, BigDecimal amount);
+    R<String> withdrawApplication(String token, BigDecimal amount, Long bankAccountId);
+
+    R<Page> getWithdrawApplications(int page,int pageSize,String token,String status);
 }
