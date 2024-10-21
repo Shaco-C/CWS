@@ -13,6 +13,7 @@ import com.watergun.service.ProductService;
 import com.watergun.service.ReviewService;
 import com.watergun.utils.JwtUtil;
 import io.micrometer.common.util.StringUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -193,6 +194,57 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
 
         this.page(pageInfo, productsLambdaQueryWrapper);
         return R.success(pageInfo);
+    }
+
+
+
+    //------------管理员方法--------------
+    // 管理员分页查询待审核产品
+    @Override
+    public R<Page> adminGetProductsPage(int page, int pageSize, String status) {
+        log.info("Admin querying products - page: {}, pageSize: {}, status: {}", page, pageSize, status);
+
+        Page pageInfo = new Page(page, pageSize);
+        LambdaQueryWrapper<Products> productsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+
+        // 根据状态筛选待审核的产品（pending、approved、rejected）
+        if (StringUtils.isNotEmpty(status)) {
+            productsLambdaQueryWrapper.eq(Products::getStatus, status);
+        }
+
+        // 默认按照产品上架时间倒序排列
+        productsLambdaQueryWrapper.orderByDesc(Products::getCreatedAt);
+
+        this.page(pageInfo, productsLambdaQueryWrapper);
+        return R.success(pageInfo);
+    }
+
+    //管理员审核商品是否通过审核
+    @Override
+    public R<String> adminApproveProduct(Long productId, String status, String token) {
+        log.info("productId: {}, status: {}", productId, status);
+        log.info("token: {}", token);
+
+        String userRole = jwtUtil.extractRole(token);
+        log.info("userRole: {}", userRole);
+        if (!userRole.equals("admin")) {
+            return R.error("hello, you are not admin");
+        }
+
+        // 检查状态是否有效
+        if (!status.equals("approved") && !status.equals("rejected")) {
+            return R.error("Invalid status");
+        }
+
+        Products products = new Products();
+        products.setProductId(productId);
+        products.setStatus(status);
+
+        if(!this.updateById(products)){
+            return R.error("产品审核失败");
+        }
+
+        return R.success("产品审核完成");
     }
 
 }

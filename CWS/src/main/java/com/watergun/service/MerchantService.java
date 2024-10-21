@@ -18,4 +18,11 @@ public interface MerchantService extends IService<Merchants> {
     R<String> withdrawApplication(String token, BigDecimal amount, Long bankAccountId);
 
     R<Page> getWithdrawApplications(int page,int pageSize,String token,String status);
+
+    //----------管理员方法---------
+    // 管理员分页查询用户申请成为商家的申请
+    R<Page> adminGetMerchantApplicationPage(int page, int pageSize, String status);
+
+    //管理员审核用户申请成为商家的申请是否通过审核
+    R<String> adminApproveMerchantApplication(Long merchantApplicationId,String status,String token);
 }

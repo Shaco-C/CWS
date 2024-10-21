@@ -1,6 +1,7 @@
 package com.watergun.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.entity.Categories;
@@ -118,6 +119,27 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
         return R.success("分类删除成功");
     }
 
+    //----------管理员方法---------
+    //管理员分页查询所有分类标签
+    @Override
+    public R<Page> adminGetCategoriesPage(int page, int pageSize, Long parentId){
+        log.info("分页查询请求");
+        log.info("page = {}, pageSize = {}, parentId = {}", page, pageSize, parentId);
+
+        Page<Categories> pageInfo = new Page<>(page, pageSize);
+
+        LambdaQueryWrapper<Categories> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+
+        // 如果传递了 parentId，过滤对应的类别
+        if (parentId != null) {
+            lambdaQueryWrapper.eq(Categories::getParentId, parentId);
+        }
+
+        lambdaQueryWrapper.orderByDesc(Categories::getCreatedAt);
+
+        this.page(pageInfo, lambdaQueryWrapper);
+        return R.success(pageInfo);
+    }
 
 
 }

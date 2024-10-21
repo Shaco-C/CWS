@@ -25,4 +25,11 @@ public interface ReviewService extends IService<Reviews> {
     R<Page> getUserselfReviews(int page, int pageSize, String token);
 
 
+    //-----------管理员方法-----------
+    //展示所有评论，按照status进行分类，如果前端没传默认查询所有的评论  (对管理员)
+    R<Page> adminGetReviewsPage(int page, int pageSize, String status);
+
+    // 管理员审核评论（通过或拒绝）
+    R<String> reviewStatus(Long reviewId,String status,String token);
+
 }

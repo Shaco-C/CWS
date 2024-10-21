@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.watergun.common.R;
 import com.watergun.dto.ProductDTO;
 import com.watergun.entity.Products;
-
+import jakarta.servlet.http.HttpServletRequest;
 
 
 public interface ProductService extends IService<Products> {
@@ -27,4 +27,11 @@ public interface ProductService extends IService<Products> {
 
     //商家查看自己的产品信息
     R<Page> getMyProducts(int page,int pageSize,String token,String sortField, String sortOrder);
+
+    //-----------管理员方法----------------
+    // 管理员分页查询待审核产品
+    R<Page> adminGetProductsPage(int page,int pageSize, String status);
+
+    //管理员审核商品是否通过审核
+    R<String> adminApproveProduct(Long productId, String status, String token);
 }

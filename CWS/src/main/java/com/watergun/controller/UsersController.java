@@ -1,11 +1,13 @@
 package com.watergun.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
+import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -96,4 +98,19 @@ public class UsersController {
         // 这里可以考虑实现JWT黑名单机制，记录当前用户的Token，阻止其再次使用
         return R.success("Successfully logged out");
     }
+
+
+    //---------管理员方法---------
+
+    //管理员查看所有用户请求
+    @GetMapping("/admin/getUserPage")
+    public R<Page> adminGetUsersPage(@RequestParam(value = "page", defaultValue = "1") int page,
+                                     @RequestParam(value = "pageSize", defaultValue = "1") int pageSize,
+                                     String role){
+        log.info("管理员查看所有用户请求");
+        return  userService.adminGetUsersPage(page,pageSize,role);
+    }
+
+
+
 }

@@ -1,11 +1,13 @@
 package com.watergun.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
 import com.watergun.dto.ProductDTO;
 import com.watergun.entity.Products;
 import com.watergun.service.ProductService;
 
+import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,4 +68,22 @@ public class ProductsController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return productService.getMyProducts(page,pageSize,token,sortField,sortOrder);
     }
+
+    //----------------管理员方法------------------------
+    // 管理员分页查询待审核产品
+    @GetMapping("/admin/getProductsPage")
+    public R<Page> adminGetProductsPage(@RequestParam(value = "page", defaultValue = "1") int page,
+                                @RequestParam(value = "pageSize", defaultValue = "1")int pageSize,
+                                String status) {
+        return productService.adminGetProductsPage(page,pageSize,status);
+    }
+
+    //管理员审核商品是否通过审核
+    @PutMapping("/admin/productStatus/{productId}")
+    public R<String> adminApproveProduct(@PathVariable Long productId,@RequestParam String status,HttpServletRequest request){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return productService.adminApproveProduct(productId,status,token);
+    }
+
+
 }

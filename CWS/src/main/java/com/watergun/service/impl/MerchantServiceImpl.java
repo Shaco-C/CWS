@@ -13,15 +13,12 @@ import com.watergun.mapper.MerchantsMapper;
 import com.watergun.service.*;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,23 +28,18 @@ import java.util.stream.Collectors;
 public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants> implements MerchantService {
 
     @Autowired
-    @Lazy
     private JwtUtil jwtUtil;
 
     @Autowired
-    @Lazy
     private ProductService productService;
 
     @Autowired
-    @Lazy
     private UserService userService;
 
     @Autowired
-    @Lazy
     private OrderService orderService;
 
     @Autowired
-    @Lazy
     private OrderItemsService orderItemsService;
 
     @Autowired
@@ -56,25 +48,29 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     @Autowired
     private WithdrawalRecordsService withdrawalRecordsService;
 
+    @Autowired
+    private MerchantApplicationService merchantApplicationService;
+
     @Override
     public R<String> updateMerchant(String token, Merchants merchants) {
         log.info("token: {}", token);
         log.info("merchants: {}", merchants);
 
         // 校验 token 是否有效
-        if (!jwtUtil.isTokenExpired(token)) {
+        if (jwtUtil.isTokenExpired(token)) {
             return R.error("无效的token");
         }
 
         Long merchantId = jwtUtil.extractUserId(token);
         String userRole = jwtUtil.extractRole(token);
-
+        log.info("商家ID: {}", merchantId);
+        log.info("userRole: {}", userRole);
         // 如果是管理员，可以修改任何商家信息
         if ("admin".equals(userRole)) {
             log.info("管理员{}正在修改商家信息", merchantId);
         } else if (merchantId == null || !merchantId.equals(merchants.getMerchantId())) {
             // 如果是商家本人，必须匹配商家ID
-            log.warn("商家{}尝试修改无权限的商家信息", merchantId);
+            log.warn("商家{}尝试修改无权限的商家{}信息", merchantId, merchants.getMerchantId());
             return R.error("权限不足");
         }
 
@@ -346,6 +342,75 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         }
     }
 
+
+
+    //----------管理员方法---------
+    // 管理员分页查询用户申请成为商家的申请
+    @Override
+    public R<Page> adminGetMerchantApplicationPage(int page, int pageSize, String status) {
+        log.info("Admin querying merchant applications - page: {}, pageSize: {}, status: {}", page, pageSize, status);
+
+        Page pageInfo = new Page(page,pageSize);
+        LambdaQueryWrapper<MerchantApplication> merchantApplicationsLambdaQueryWrapper = new LambdaQueryWrapper();
+        merchantApplicationsLambdaQueryWrapper.eq(io.micrometer.common.util.StringUtils.isNotEmpty(status), MerchantApplication::getStatus,status)
+                .orderByDesc(MerchantApplication::getUpdatedAt);
+
+        merchantApplicationService.page(pageInfo,merchantApplicationsLambdaQueryWrapper);
+        return R.success(pageInfo);
+    }
+
+    //管理员审核用户申请成为商家的申请是否通过审核
+    @Override
+    public R<String> adminApproveMerchantApplication(Long merchantApplicationId,String status,String token){
+        log.info("merchantId: {}, status: {}", merchantApplicationId, status);
+        log.info("token: {}", token);
+
+        String userRole = jwtUtil.extractRole(token);
+        log.info("userRole: {}", userRole);
+        if (!userRole.equals("admin")) {
+            return R.error("hello, you are not admin");
+        }
+
+        //获取申请详细信息
+        LambdaQueryWrapper<MerchantApplication> merchantApplicationLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        merchantApplicationLambdaQueryWrapper.eq(MerchantApplication::getApplicationId,merchantApplicationId);
+
+        //申请表详细信息
+        MerchantApplication merchantApplication = merchantApplicationService.getOne(merchantApplicationLambdaQueryWrapper);
+
+        if (status.equals("rejected")){
+            merchantApplication.setStatus("rejected");
+            merchantApplicationService.updateById(merchantApplication);
+            return R.success("用户成为商家申请被拒绝");
+        }
+
+        //从这开始之后就是申请通过的逻辑了
+        //更新申请表信息
+        merchantApplication.setStatus("approved");
+        merchantApplicationService.updateById(merchantApplication);
+
+        //将申请表信息注入商家表
+        Merchants merchants = new Merchants();
+        merchants.setMerchantId(merchantApplication.getUserId());
+        merchants.setShopName(merchantApplication.getShopName());
+        merchants.setAddress(merchantApplication.getAddress());
+        merchants.setCountry(merchantApplication.getCountry());
+
+        //以下的信息可以是空的值
+        merchants.setTaxId(merchantApplication.getTaxId());
+        merchants.setPaymentInfo(merchantApplication.getPaymentInfo());
+        merchants.setShopAvatarUrl(merchantApplication.getShopAvatarUrl());
+
+        this.save(merchants);
+
+        //同时也要更新用户表，将用户角色改为商家
+        Users users = new Users();
+        users.setRole("merchant");
+        users.setUserId(merchantApplication.getUserId());
+        userService.updateById(users);
+
+        return R.success("用户成为商家申请通过");
+    }
 
 
 }

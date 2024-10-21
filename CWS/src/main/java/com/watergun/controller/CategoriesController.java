@@ -1,5 +1,7 @@
 package com.watergun.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.entity.Categories;
@@ -43,5 +45,17 @@ public class CategoriesController {
     public R<String> deleteCategories(HttpServletRequest request, @PathVariable("categoryId") Long categoryId) {
         String token = request.getHeader("Authorization").replace("Bearer ", ""); //获取token
         return categoryService.deleteCategories(token,categoryId);
+    }
+
+    //-------------管理员方法---------------
+    //管理员分页查询所有分类标签
+    @GetMapping("/admin/getCategoriesPage")
+    public R<Page> adminGetCategoriesPage(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(value = "parentId", required = false) Long parentId) {
+
+        return categoryService.adminGetCategoriesPage(page, pageSize, parentId);
+
     }
 }

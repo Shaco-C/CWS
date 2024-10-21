@@ -1,6 +1,7 @@
 package com.watergun.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
@@ -10,6 +11,7 @@ import com.watergun.service.CartService;
 import com.watergun.service.MerchantApplicationService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
+import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -71,11 +73,11 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         Long userId = jwtUtil.extractUserId(token);
         log.info("userId: {}", userId);
         String userRole = jwtUtil.extractRole(token);
-        if (!userId.equals(user.getUserId())&&!userRole.equals("admin")){
+        if (!userId.equals(user.getUserId())&&!"admin".equals(userRole)){
             log.warn("用户ID {} 尝试修改非本人信息，当前角色: {}", userId, userRole);
             return R.error("无权限");
         }
-        if (userRole.equals("user") && (user.getRole() == null || !user.getRole().equals("user"))) {
+        if ("user".equals(userRole) && (user.getRole() == null || !"user".equals(user.getRole()))) {
             log.warn("用户ID {} 尝试修改权限，当前角色: {}", userId, userRole);
             return R.error("请不要修改自己的权限");
         }
@@ -112,13 +114,30 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         log.info("merchantApplication: {}", merchantApplication);
         Long userId = jwtUtil.extractUserId(token);
         String userRole =jwtUtil.extractRole(token);
-        if (!userRole.equals("user")){
+        if (!"user".equals(userRole)){
             return R.error("管理员或商家不能够申请成为商家");
         }
         merchantApplication.setStatus("pending");
         merchantApplication.setUserId(userId);
         merchantApplicationService.save(merchantApplication);
         return R.success("申请成功");
+    }
+
+
+    //---------管理员方法---------
+    //管理员查看所有用户请求
+    @Override
+    public R<Page> adminGetUsersPage(int page, int pageSize, String role) {
+        log.info("分页查询请求");
+        log.info("page = {}, pageSize = {}, role = {}",page,pageSize,role);
+        Page pageInfo = new Page(page,pageSize);
+        log.info("查看Users表信息");
+        LambdaQueryWrapper<Users> lambdaQueryWrapper = new LambdaQueryWrapper();
+        lambdaQueryWrapper.like(StringUtils.isNotEmpty(role),Users::getRole,role);
+        lambdaQueryWrapper.orderByDesc(Users::getUpdatedAt);
+
+        this.page(pageInfo,lambdaQueryWrapper);
+        return R.success(pageInfo);
     }
 
 }

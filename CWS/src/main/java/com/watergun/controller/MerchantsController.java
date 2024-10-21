@@ -1,12 +1,17 @@
 package com.watergun.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
 import com.watergun.dto.ShopDTO;
+import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Merchants;
+import com.watergun.entity.Users;
 import com.watergun.service.MerchantService;
+import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -55,7 +60,7 @@ public class MerchantsController {
     }
 
     //查看商店的提现记录
-    @GetMapping
+    @GetMapping("/getWithdrawApplications")
     public R<Page> getWithdrawApplications(@RequestParam(value = "page", defaultValue = "1") int page,
                              @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
                              HttpServletRequest request, String status){
@@ -69,4 +74,21 @@ public class MerchantsController {
 
     //待确认金额转为确认金额
 
+    //----------管理员方法---------
+    // 管理员分页查询用户申请成为商家的申请
+    @GetMapping("/admin/getMerchantApplicationPage")
+    public R<Page> adminGetMerchantApplicationPage(@RequestParam(value = "page", defaultValue = "1") int page,
+                                            @RequestParam(value = "pageSize", defaultValue = "1") int pageSize,
+                                            String status) {
+        return merchantService.adminGetMerchantApplicationPage(page, pageSize, status);
+    }
+
+    //管理员审核用户申请成为商家的申请是否通过审核
+    @Transactional
+    @PutMapping("/admin/approveMerchantApplicationStatus/{merchantApplicationId}")
+    public R<String> adminApproveMerchantApplication(@PathVariable Long merchantApplicationId,@RequestParam String status,HttpServletRequest request){
+        // 从请求头中获取 JWT
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return merchantService.adminApproveMerchantApplication(merchantApplicationId,status,token);
+    }
 }

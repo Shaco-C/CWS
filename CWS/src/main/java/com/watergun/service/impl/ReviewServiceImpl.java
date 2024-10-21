@@ -12,6 +12,7 @@ import com.watergun.service.AIReviewLogService;
 import com.watergun.service.ReviewService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
+import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -168,5 +169,43 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
 
         return R.success(pageInfo);
     }
+    //---------------------管理员方法----------------------
+    //展示所有评论，按照status进行分类，如果前端没传默认查询所有的评论  (对管理员)
+    @Override
+    public R<Page> adminGetReviewsPage(int page, int pageSize, String status){
+        log.info("page: {}, pageSize: {}, status: {}", page, pageSize, status);
+        Page pageInfo = new Page(page,pageSize);
+        log.info("查看评论");
+        LambdaQueryWrapper<Reviews> reviewsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        reviewsLambdaQueryWrapper.like(StringUtils.isNotEmpty(status),Reviews::getStatus,status)
+                .orderByDesc(Reviews::getUpdatedAt); //按照时间排序
+        this.page(pageInfo,reviewsLambdaQueryWrapper);
+        return R.success(pageInfo);
+    }
 
+    // 管理员审核评论（通过或拒绝）
+    @Override
+    public R<String> reviewStatus(Long reviewId, String status, String token){
+        log.info("token: {}", token);
+        // 提取 JWT 中的用户角色
+        String userRole = jwtUtil.extractRole(token);
+        log.info("userRole: {}", userRole);
+
+        // 检查用户是否是管理员
+        if (!"admin".equals(userRole)) {
+            return R.error("你无权进行审核操作");
+        }
+
+        // 根据评论ID获取评论详情
+        Reviews review = this.getById(reviewId);
+        if (review == null) {
+            return R.error("评论不存在");
+        }
+
+        // 更新评论状态
+        review.setStatus(status);
+        this.updateById(review);
+
+        return R.success("评论状态更新为: " + status);
+    }
 }
