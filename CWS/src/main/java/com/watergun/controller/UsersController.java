@@ -1,19 +1,14 @@
 package com.watergun.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
 import com.watergun.service.UserService;
-import com.watergun.utils.JwtUtil;
-import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-// 加密密码使用BCrypt
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 
 @RestController
@@ -21,16 +16,16 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 @Slf4j
 public class UsersController {
 
-    @Autowired
-    private UserService userService;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final UserService userService;
 
+    public UsersController(UserService userService) {
+        this.userService = userService;
+    }
 
     //注册用户
     @PostMapping
-    public R<String> createUser(@RequestBody Users user) {
+    public R<Users> createUser(@RequestBody Users user) {
         return userService.createUser(user);
     }
 
@@ -62,31 +57,7 @@ public class UsersController {
 
     @PostMapping("/login")
     public R<String> login(HttpServletRequest request, @RequestBody Users user) {
-        log.info("请求登陆的user信息为",user);
-        // 根据用户提交的邮箱查询数据库
-        LambdaQueryWrapper<Users> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Users::getEmail, user.getEmail());
-        Users users = userService.getOne(queryWrapper);
-
-        // 如果没有查询到则返回登陆失败结果
-        if (users == null) {
-            return R.error("不存在该邮箱");
-        }
-
-        // 使用 BCrypt 比对密码
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        if (!passwordEncoder.matches(user.getPassword(), users.getPassword())) {
-            return R.error("密码错误");
-        }
-
-        // 登录成功，生成 JWT
-        String token = jwtUtil.generateToken(users.getEmail(), users.getRole(), users.getUserId());
-        log.info("token为:{}",token);
-        // 将用户 ID 存入 Session（可选）
-        request.getSession().setAttribute("UserId", users.getUserId());
-
-        // 返回 JWT 给客户端
-        return R.success(token);
+        return userService.login(request,user);
     }
 
     @PostMapping("/logout")
@@ -110,7 +81,4 @@ public class UsersController {
         log.info("管理员查看所有用户请求");
         return  userService.adminGetUsersPage(page,pageSize,role);
     }
-
-
-
 }

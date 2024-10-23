@@ -13,7 +13,6 @@ import com.watergun.service.ProductService;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,12 +23,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categories> implements CategoryService {
 
-    @Lazy
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    private final ProductService productService;
 
-    @Autowired
-    private ProductService productService;
+    public CategoryServiceImpl(JwtUtil jwtUtil, ProductService productService) {
+        this.jwtUtil = jwtUtil;
+        this.productService = productService;
+    }
 
     //按照parentId分类存储
     @Override

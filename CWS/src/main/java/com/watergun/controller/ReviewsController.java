@@ -1,11 +1,9 @@
 package com.watergun.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
 import com.watergun.entity.Reviews;
 import com.watergun.service.ReviewService;
-import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +15,16 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class ReviewsController {
 
-    @Autowired
-    private ReviewService reviewService;
+
+    private final ReviewService reviewService;
+
+    public ReviewsController(ReviewService reviewService) {
+        this.reviewService = reviewService;
+    }
 
     //用户发表评论
     @PostMapping
-    public R<String> createReview(HttpServletRequest request, @RequestBody Reviews review) {
+    public R<Reviews> createReview(HttpServletRequest request, @RequestBody Reviews review) {
         // 从请求头中获取 JWT
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return reviewService.createReview(token, review);
@@ -30,7 +32,7 @@ public class ReviewsController {
 
     // 更新评论
     @PutMapping("/{reviewId}")
-    public R<String> updateReview(@PathVariable Long reviewId, @RequestBody Reviews reviewDetails, HttpServletRequest request) {
+    public R<Reviews> updateReview(@PathVariable Long reviewId, @RequestBody Reviews reviewDetails, HttpServletRequest request) {
         // 从请求头中获取 JWT token
         String token = request.getHeader("Authorization").replace("Bearer ", "");
 
@@ -51,6 +53,14 @@ public class ReviewsController {
         // 从请求头中获取 JWT token
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return reviewService.getUserselfReviews(page, pageSize, token);
+    }
+
+    //获得产品所有通过审核的评论(通过productId查询)
+    @GetMapping("/getReviewsByProductId/{productId}")
+    public R<Page> getReviewsByProductId(@RequestParam(value = "page", defaultValue = "1") int page,
+                                         @RequestParam(value = "pageSize", defaultValue = "1") int pageSize,
+                                         @PathVariable Long productId){
+        return reviewService.getApprovedReviewsByProductId( productId,page, pageSize);
     }
 
     //--------------------管理员方法-----------------

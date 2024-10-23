@@ -10,6 +10,7 @@ import java.util.List;
 
 
 //用来显示店铺的页面信息
+//多余的
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

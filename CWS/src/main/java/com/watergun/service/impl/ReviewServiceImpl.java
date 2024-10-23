@@ -8,14 +8,12 @@ import com.watergun.dto.ReviewDTO;
 import com.watergun.entity.Reviews;
 import com.watergun.entity.Users;
 import com.watergun.mapper.ReviewsMapper;
-import com.watergun.service.AIReviewLogService;
 import com.watergun.service.ReviewService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,26 +24,31 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> implements ReviewService {
 
-    @Autowired
-    @Lazy
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired
-    private AIReviewLogService aiReviewLogService;
+    private final JwtUtil jwtUtil;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    public ReviewServiceImpl(UserService userService, JwtUtil jwtUtil) {
+        this.userService = userService;
+        this.jwtUtil = jwtUtil;
+    }
 
     //展示产品通过审核的评论
     @Override
-    public List<ReviewDTO> getApprovedReviewsByProductId(Long productId) {
+    public R<Page> getApprovedReviewsByProductId(Long productId, int page, int pageSize) {
 
-        // 查询所有通过审核的评论
+        // 创建分页对象
+        Page<Reviews> pageInfo = new Page<>(page, pageSize);
+
+        // 查询所有通过审核的评论，并分页
         LambdaQueryWrapper<Reviews> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Reviews::getProductId, productId)
                 .eq(Reviews::getStatus, "approved")
                 .orderByDesc(Reviews::getUpdatedAt);
-        List<Reviews> reviewsList = list(queryWrapper);
+
+        // 使用分页查询
+        Page<Reviews> reviewPage = this.page(pageInfo, queryWrapper);
+        List<Reviews> reviewsList = reviewPage.getRecords();
         log.info("reviewsList: {}", reviewsList);
 
         // 获取所有需要查询的用户 ID
@@ -61,18 +64,23 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
                 .collect(Collectors.toMap(Users::getUserId, user -> user));
         log.info("userMap: {}", userMap);
 
-        // 使用流将 Reviews 转换为 ReviewDTO
+        // 使用流将 Reviews 转换为 ReviewDTO，并保持分页结构
         List<ReviewDTO> reviewDTOList = reviewsList.stream().map(review -> {
             Users user = userMap.get(review.getUserId());
             return new ReviewDTO(review, user.getUsername(), user.getAvatarUrl());
         }).toList();
 
-        return reviewDTOList;
+        // 将转换后的 DTO 列表设置回分页对象中
+        Page<ReviewDTO> reviewDTOPage = new Page<>(pageInfo.getCurrent(), pageInfo.getSize(), pageInfo.getTotal());
+        reviewDTOPage.setRecords(reviewDTOList);
+
+        return R.success(reviewDTOPage);
     }
+
 
     //用户发表评论
     @Override
-    public R<String> createReview(String token, Reviews review) {
+    public R<Reviews> createReview(String token, Reviews review) {
         log.info("调用用户发表评论请求");
         log.info("token: {}", token);
         log.info("review: {}", review);
@@ -84,15 +92,16 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         review.setUserId(userId);
         log.info("review: {}", review);
 
-        this.save(review);
-        // 调用AI审核
-        aiReviewLogService.reviewIsOk(review);
-        return R.success("评论已提交，待审核");
+        boolean result = this.save(review);
+        if (!result){
+            return R.error("评论提交失败");
+        }
+        return R.success(review);
     }
 
     //更新评论
     @Override
-    public R<String> updateReview(Long reviewId, String token, Reviews reviewDetails) {
+    public R<Reviews> updateReview(Long reviewId, String token, Reviews reviewDetails) {
         log.info("调用用户更新评论请求");
         log.info("reviewId: {}", reviewId);
         log.info("token: {}", token);
@@ -116,11 +125,11 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         review.setComment(reviewDetails.getComment());
         review.setRating(reviewDetails.getRating());
         review.setStatus("pending");
-        this.updateById(review);
-
-        // 调用AI审核
-        aiReviewLogService.reviewIsOk(review);
-        return R.success("评论已提交，待审核");
+        boolean result = this.updateById(review);
+        if (!result){
+            return R.error("评论更新失败");
+        }
+        return R.success(review);
     }
 
     //删除评论

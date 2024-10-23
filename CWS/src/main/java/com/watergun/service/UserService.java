@@ -5,14 +5,17 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
 public interface UserService extends IService<Users> {
     List<Users> getUsersByIds(List<Long> userIds); // 根据用户ID列表获取用户信息
 
+    //登陆
+    R<String> login(HttpServletRequest request, Users user);
     //创建用户
-    R<String> createUser(Users user);
+    R<Users> createUser(Users user);
     //更新用户信息
     R<String> updateUser(String token, Users user);
     //删除用户

@@ -20,11 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class BankAccountsServiceImpl extends ServiceImpl<BankAccountsMapper, BankAccounts> implements BankAccountsService {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    private final BankAccountChecker bankAccountChecker;
 
-    @Autowired
-    private BankAccountChecker bankAccountChecker;
+    public BankAccountsServiceImpl(JwtUtil jwtUtil, BankAccountChecker bankAccountChecker) {
+        this.jwtUtil = jwtUtil;
+        this.bankAccountChecker = bankAccountChecker;
+    }
 
     @Override
     @Transactional(readOnly = true)

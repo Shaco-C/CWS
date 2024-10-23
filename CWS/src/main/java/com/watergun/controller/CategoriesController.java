@@ -1,8 +1,6 @@
 package com.watergun.controller;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.entity.Categories;
 import com.watergun.service.CategoryService;
@@ -18,8 +16,12 @@ import java.util.Map;
 @RequestMapping("/categories")
 public class CategoriesController {
 
-    @Autowired
-    private CategoryService categoryService;
+
+    private final CategoryService categoryService;
+
+    public CategoriesController(CategoryService categoryService) {
+        this.categoryService = categoryService;
+    }
 
     //获取所有分类,按照parentId进行分类
     @GetMapping("/list")

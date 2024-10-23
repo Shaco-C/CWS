@@ -1,5 +1,6 @@
 package com.watergun.service.impl;
 
+import com.watergun.common.R;
 import com.watergun.entity.AIReviewLogs;
 import com.watergun.entity.Reviews;
 import com.watergun.mapper.AIReviewLogsMapper;
@@ -12,7 +13,6 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -20,12 +20,14 @@ import org.springframework.stereotype.Service;
 public class AIReviewLogServiceImpl extends ServiceImpl<AIReviewLogsMapper, AIReviewLogs> implements AIReviewLogService {
 
 
-    @Resource
-    private OllamaChatModel ollamaChatModel;
+    private final OllamaChatModel ollamaChatModel;
+    private final ReviewService reviewService;
 
-    @Lazy
-    @Autowired
-    private ReviewService reviewService;
+    // 只有一个构造函数，Spring 会自动进行注入
+    public AIReviewLogServiceImpl(OllamaChatModel ollamaChatModel, ReviewService reviewService) {
+        this.ollamaChatModel = ollamaChatModel;
+        this.reviewService = reviewService;
+    }
 
     @Override
     public String chatToAI(String msg) {
@@ -39,7 +41,10 @@ public class AIReviewLogServiceImpl extends ServiceImpl<AIReviewLogsMapper, AIRe
     //在审核评论之后创建log,以及更新review评论
     @Override
     @Async
-    public void reviewIsOk(Reviews msg) {
+    public R<String> reviewIsOk(Long reviewId) {
+
+        Reviews msg = reviewService.getById(reviewId);
+
         String key=msg.getComment()+"If this comment does not offend anyone and is suitable for discussion by everyone. Then just reply with a simple word 'YES', otherwise just reply with 'NO'.";
         msg.setComment(key);
         ChatResponse chatResponse=ollamaChatModel.call(new Prompt(msg.getComment(), OllamaOptions.create()
@@ -56,6 +61,10 @@ public class AIReviewLogServiceImpl extends ServiceImpl<AIReviewLogsMapper, AIRe
             msg.setStatus("rejected");
         }
         reviewService.updateById(msg);
-        this.save(aiReviewLogs);
+        boolean result = this.save(aiReviewLogs);
+        if (!result){
+            return R.error("审核失败");
+        }
+        return R.success("审核成功");
     }
 }

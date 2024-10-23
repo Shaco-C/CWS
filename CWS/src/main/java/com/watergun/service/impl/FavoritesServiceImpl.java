@@ -26,14 +26,15 @@ import java.util.stream.Collectors;
 @Slf4j
 public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites> implements FavoritesService {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    private final ProductService productService;
+    private final MerchantService merchantService;
 
-    @Autowired
-    private ProductService productService;
-
-    @Autowired
-    private MerchantService merchantService;
+    public FavoritesServiceImpl(JwtUtil jwtUtil, ProductService productService, MerchantService merchantService) {
+        this.jwtUtil = jwtUtil;
+        this.productService = productService;
+        this.merchantService = merchantService;
+    }
 
     //添加收藏
     @Override
@@ -45,6 +46,12 @@ public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites
         log.info("addToFavorites: userId={}", userId);
         if (userId == null || productId==null) {
             return R.error("添加收藏失败,系统错误");
+        }
+        LambdaQueryWrapper<Favorites> favoritesLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        favoritesLambdaQueryWrapper.eq(Favorites::getUserId, userId)
+                .eq(Favorites::getProductId, productId);
+        if (this.getOne(favoritesLambdaQueryWrapper) != null) {
+            return R.error("添加收藏失败，该商品已在收藏列表中");
         }
         Favorites favorites = new Favorites();
         favorites.setProductId(productId);

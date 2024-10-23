@@ -17,7 +17,6 @@ import com.watergun.service.ProductService;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,21 +30,20 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements CartService {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    private final CartItemService cartItemService;
+    private final ProductService productService;
+    private final MerchantService merchantService;
 
-    @Autowired
-    private CartItemService cartItemService;
-
-    @Autowired
-    @Lazy
-    private ProductService productService;
-
-    @Autowired
-    private MerchantService merchantService;
+    public CartServiceImpl(JwtUtil jwtUtil, CartItemService cartItemService, ProductService productService, MerchantService merchantService) {
+        this.jwtUtil = jwtUtil;
+        this.cartItemService = cartItemService;
+        this.productService = productService;
+        this.merchantService = merchantService;
+    }
 
     @Override
-    public void firstCreateCart(Long userId) {
+    public R<String> firstCreateCart(Long userId) {
         log.info("firstCreateCart: userId = {}", userId);
         Cart cart = new Cart();
         if (userId==null){
@@ -53,11 +51,15 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
             throw new CustomException("userId is null");
         }
         cart.setUserId(userId);
-        this.save(cart);
+        boolean result= this.save(cart);
+        if (!result){
+            return R.error("create cart failed");
+        }
+        return R.success("create cart success");
     }
 
     @Override
-    public void removeCartByUserId(Long userId) {
+    public R<String> removeCartByUserId(Long userId) {
         log.info("removeCartByuserId: userId = {}", userId);
         if (userId==null){
             log.warn("userId is null");
@@ -65,7 +67,11 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         }
         LambdaQueryWrapper<Cart> cartLambdaQueryWrapper = new LambdaQueryWrapper<>();
         cartLambdaQueryWrapper.eq(Cart::getUserId, userId);
-        this.remove(cartLambdaQueryWrapper);
+        boolean result = this.remove(cartLambdaQueryWrapper);
+        if (!result){
+            return R.error("remove cart failed");
+        }
+        return R.success("remove cart success");
     }
 
     @Override

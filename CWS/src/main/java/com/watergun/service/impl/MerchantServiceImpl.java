@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.CustomException;
 import com.watergun.common.R;
-import com.watergun.dto.OrderDTO;
 import com.watergun.dto.ShopDTO;
 import com.watergun.entity.*;
 import com.watergun.mapper.MerchantsMapper;
@@ -20,36 +19,45 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants> implements MerchantService {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
+    private final ProductService productService;
+    private final UserService userService;
+    private final BankAccountsService bankAccountsService;
+    private final WithdrawalRecordsService withdrawalRecordsService;
+    private final MerchantApplicationService merchantApplicationService;
 
-    @Autowired
-    private ProductService productService;
+    // 使用构造函数注入依赖
+    public MerchantServiceImpl(JwtUtil jwtUtil,
+                               ProductService productService,
+                               UserService userService,
+                               BankAccountsService bankAccountsService,
+                               WithdrawalRecordsService withdrawalRecordsService,
+                               MerchantApplicationService merchantApplicationService) {
+        this.jwtUtil = jwtUtil;
+        this.productService = productService;
+        this.userService = userService;
+        this.bankAccountsService = bankAccountsService;
+        this.withdrawalRecordsService = withdrawalRecordsService;
+        this.merchantApplicationService = merchantApplicationService;
+    }
 
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private OrderService orderService;
-
-    @Autowired
-    private OrderItemsService orderItemsService;
-
-    @Autowired
-    private BankAccountsService bankAccountsService;
-
-    @Autowired
-    private WithdrawalRecordsService withdrawalRecordsService;
-
-    @Autowired
-    private MerchantApplicationService merchantApplicationService;
+    @Override
+    public R<Merchants> getMerchantByMerchantId(Long merchantId) {
+        log.info("获取商家信息，商家ID: {}", merchantId);
+        if (merchantId == null) {
+            return R.error("商家ID不能为空");
+        }
+        Merchants merchants = this.getById(merchantId);
+        if (merchants == null) {
+            return R.error("商家不存在");
+        }
+        return R.success(merchants);
+    }
 
     @Override
     public R<String> updateMerchant(String token, Merchants merchants) {
@@ -83,6 +91,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         return R.success("商家信息修改成功");
     }
 
+    //可化简，多余方法ShopDTO
     @Override
     public R<ShopDTO> getMerchantInfo(Long merchantId) {
         log.info("获取商家信息，商家ID: {}", merchantId);
@@ -100,7 +109,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         }
 
         // 初始化ShopDTO对象
-        ShopDTO shopDTO = new ShopDTO(merchants);  // 假设你有一个构造函数可以初始化
+        ShopDTO shopDTO = new ShopDTO(merchants);
 
         // 获取商家的产品列表
         LambdaQueryWrapper<Products> productsLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -173,62 +182,6 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         }
 
         return R.success("商家删除成功");
-    }
-
-    @Override
-    public R<Page> getOrders(int page, int pageSize, String token, String status, String returnStatus) {
-        log.info("getOrders已经被调用");
-        log.info("getOrders:page: {}, pageSize: {}, token: {}, status: {}, returnStatus: {}", page, pageSize, token, status, returnStatus);
-
-        if (jwtUtil.isTokenExpired(token)) {
-            log.warn("Token has expired: {}", token);
-            return R.error("token 已过期");
-        }
-
-        Long merchantId = jwtUtil.extractUserId(token);
-        String userRole = jwtUtil.extractRole(token);
-
-        log.info("getOrders方法:merchantId: {}, userRole: {}", merchantId, userRole);
-        if (!"merchant".equals(userRole)) {
-            log.warn("非法调用");
-            throw new CustomException("非法调用");
-        }
-
-        // 分页查询商家订单
-        Page<Orders> orderPage = new Page<>(page, pageSize);
-        LambdaQueryWrapper<Orders> ordersLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        ordersLambdaQueryWrapper.eq(Orders::getMerchantId, merchantId)
-                .eq(StringUtils.isNotEmpty(status), Orders::getStatus, status)
-                .eq(StringUtils.isNotEmpty(returnStatus), Orders::getReturnStatus, returnStatus);
-
-        // 分页查询商家的订单数据
-        Page<Orders> paginatedOrders = orderService.page(orderPage, ordersLambdaQueryWrapper);
-
-        // 获取所有订单ID并查询对应的订单详情
-        List<Long> orderIdList = paginatedOrders.getRecords().stream().map(Orders::getOrderId).distinct().toList();
-        LambdaQueryWrapper<OrderItems> orderItemsLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        orderItemsLambdaQueryWrapper.in(OrderItems::getOrderId, orderIdList);
-        List<OrderItems> orderItemsList = orderItemsService.list(orderItemsLambdaQueryWrapper);
-
-        // 将同一个orderId的OrderItems放在同一个map的list中
-        Map<Long, List<OrderItems>> orderItemsMap = orderItemsList.stream()
-                .collect(Collectors.groupingBy(OrderItems::getOrderId));
-
-        // 将订单和订单详情进行关联，转换为OrderDTO对象
-        List<OrderDTO> orderDTOList = paginatedOrders.getRecords().stream().map(order -> {
-            OrderDTO orderDTO = new OrderDTO(order);
-            orderDTO.setOrderItemsList(orderItemsMap.get(order.getOrderId()));
-            return orderDTO;
-        }).toList();
-
-        // 创建新的Page对象，用于返回分页后的OrderDTO数据
-        Page<OrderDTO> dtoPage = new Page<>(page, pageSize);
-        dtoPage.setRecords(orderDTOList);
-        dtoPage.setTotal(paginatedOrders.getTotal()); // 保持原分页查询的总数
-        dtoPage.setCurrent(paginatedOrders.getCurrent());
-        dtoPage.setSize(paginatedOrders.getSize());
-
-        return R.success(dtoPage);
     }
 
     @Override
@@ -359,15 +312,16 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         return R.success(pageInfo);
     }
 
-    //管理员审核用户申请成为商家的申请是否通过审核
+    //管理员审核用户申请成为商家的申请是否通过审核(转移到MerchantApplication中)
     @Override
+    @Transactional
     public R<String> adminApproveMerchantApplication(Long merchantApplicationId,String status,String token){
         log.info("merchantId: {}, status: {}", merchantApplicationId, status);
         log.info("token: {}", token);
 
         String userRole = jwtUtil.extractRole(token);
         log.info("userRole: {}", userRole);
-        if (!userRole.equals("admin")) {
+        if (!"admin".equals(userRole)) {
             return R.error("hello, you are not admin");
         }
 
@@ -378,7 +332,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         //申请表详细信息
         MerchantApplication merchantApplication = merchantApplicationService.getOne(merchantApplicationLambdaQueryWrapper);
 
-        if (status.equals("rejected")){
+        if ("rejected".equals(status)){
             merchantApplication.setStatus("rejected");
             merchantApplicationService.updateById(merchantApplication);
             return R.success("用户成为商家申请被拒绝");

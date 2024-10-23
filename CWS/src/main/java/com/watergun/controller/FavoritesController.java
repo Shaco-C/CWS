@@ -14,8 +14,12 @@ import java.util.List;
 @RequestMapping("/favorites")
 public class FavoritesController {
 
-    @Autowired
-    private FavoritesService favoritesService;
+
+    private final FavoritesService favoritesService;
+
+    public FavoritesController(FavoritesService favoritesService) {
+        this.favoritesService = favoritesService;
+    }
 
     //商品添加到收藏
     @PostMapping("/{productId}")

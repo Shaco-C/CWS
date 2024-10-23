@@ -9,9 +9,9 @@ import com.watergun.entity.CartItems;
 import java.util.List;
 
 public interface CartService extends IService<Cart> {
-    void firstCreateCart(Long userId);
+    R<String> firstCreateCart(Long userId);
 
-    void removeCartByUserId(Long userId);
+    R<String> removeCartByUserId(Long userId);
 
     R<List<ProductDTO>> getCartList(String token);
 

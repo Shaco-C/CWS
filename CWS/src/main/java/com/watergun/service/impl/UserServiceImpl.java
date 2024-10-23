@@ -7,14 +7,13 @@ import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
 import com.watergun.mapper.UsersMapper;
-import com.watergun.service.CartService;
 import com.watergun.service.MerchantApplicationService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
 import io.micrometer.common.util.StringUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,16 +23,15 @@ import java.util.List;
 @Slf4j
 @Service
 public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements UserService {
-    @Autowired
-    private JwtUtil jwtUtil;
 
-    @Autowired
-    private MerchantApplicationService merchantApplicationService;
+    private final JwtUtil jwtUtil;
 
-    @Autowired
-    @Lazy
-    private CartService cartService;
+    private final MerchantApplicationService merchantApplicationService;
 
+    public UserServiceImpl(JwtUtil jwtUtil, MerchantApplicationService merchantApplicationService) {
+        this.jwtUtil = jwtUtil;
+        this.merchantApplicationService = merchantApplicationService;
+    }
 
     @Override
     public List<Users> getUsersByIds(List<Long> userIds) {
@@ -47,10 +45,41 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         return list(queryWrapper); // 使用 MyBatis-Plus 的 list 方法来批量查询
     }
 
+    //登陆
+    @Override
+    public R<String> login(HttpServletRequest request, Users user) {
+        log.info("请求登陆的user信息为",user);
+        // 根据用户提交的邮箱查询数据库
+        LambdaQueryWrapper<Users> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Users::getEmail, user.getEmail());
+        Users users = this.getOne(queryWrapper);
+
+        // 如果没有查询到则返回登陆失败结果
+        if (users == null) {
+            return R.error("不存在该邮箱");
+        }
+
+        // 使用 BCrypt 比对密码
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        if (!passwordEncoder.matches(user.getPassword(), users.getPassword())) {
+            return R.error("密码错误");
+        }
+
+        // 登录成功，生成 JWT
+        String token = jwtUtil.generateToken(users.getEmail(), users.getRole(), users.getUserId());
+        log.info("token为:{}",token);
+        // 将用户 ID 存入 Session（可选）
+        request.getSession().setAttribute("UserId", users.getUserId());
+
+        // 返回 JWT 给客户端
+        return R.success(token);
+    }
+
     //注册用户
+    //先注册用户，然后调用创建购物车方法
     @Override
     @Transactional
-    public R<String> createUser(Users user) {
+    public R<Users> createUser(Users user) {
         log.info("调用创建用户请求");
         log.info("user: {}", user);
         String password = user.getPassword();
@@ -59,9 +88,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         password= passwordEncoder.encode(password);
         user.setPassword(password);
         this.save(user);
-        //为用户添加购物车模块
-        cartService.firstCreateCart(user.getUserId());
-        return R.success("创建用户成功");
+        return R.success(user);
     }
 
     //用户更新自己的信息
@@ -88,6 +115,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
 
 
     //删除用户 or 用户注销账号
+    //先删除购物车再删除用户
     @Override
     @Transactional
     public R<String> deleteUser(String token, Long userId) {
@@ -101,7 +129,6 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         }
         log.info("删除用户:{}",userId);
         this.removeById(userId);
-        cartService.removeCartByUserId(userId);
         return R.success("删除用户成功");
     }
 

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
 import com.watergun.entity.BankAccounts;
 import com.watergun.service.BankAccountsService;
-import com.watergun.utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -12,10 +11,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/bankAccounts")
 public class BankAccountsController {
-    @Autowired
-    private BankAccountsService bankAccountsService;
 
+    private final BankAccountsService bankAccountsService;
 
+    public BankAccountsController(BankAccountsService bankAccountsService) {
+        this.bankAccountsService = bankAccountsService;
+    }
 
     //获取所有银行账户
     @GetMapping("/page")
