@@ -48,7 +48,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     //登陆
     @Override
     public R<String> login(HttpServletRequest request, Users user) {
-        log.info("请求登陆的user信息为",user);
+        log.info("请求登陆的user信息为{}",user);
         // 根据用户提交的邮箱查询数据库
         LambdaQueryWrapper<Users> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Users::getEmail, user.getEmail());

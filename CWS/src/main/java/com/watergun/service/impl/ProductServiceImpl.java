@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 
 @Service
 @Slf4j
@@ -20,9 +22,21 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
 
 
     private final JwtUtil jwtUtil;
+    private final ProductsMapper productMapper;
 
-    public ProductServiceImpl(JwtUtil jwtUtil) {
+    public ProductServiceImpl(JwtUtil jwtUtil, ProductsMapper productMapper) {
         this.jwtUtil = jwtUtil;
+        this.productMapper = productMapper;
+    }
+
+    @Override
+    public List<Products> getProductsByIds(List<Long> productIds) {
+        // 创建条件查询包装器，筛选出匹配的商品ID
+        LambdaQueryWrapper<Products> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(Products::getProductId, productIds);
+
+        // 使用产品Mapper查询符合条件的商品
+        return productMapper.selectList(queryWrapper);
     }
 
     //创建产品

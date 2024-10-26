@@ -9,6 +9,17 @@ import com.watergun.entity.Merchants;
 import java.math.BigDecimal;
 
 public interface MerchantService extends IService<Merchants> {
+    //--------methods----------
+
+    //用户付款之后，金额转入商家的待确认金额
+    void addPendingAmount(Long merchantId, BigDecimal amount);
+
+    //待确认金额变更日志
+
+    void addPendingAmountLog(Long merchantId,BigDecimal amount,String description,String currency);
+
+
+    //------------serviceLogic----------------
     R<Merchants> getMerchantByMerchantId(Long merchantId);
     R<String> updateMerchant(String token, Merchants merchants);
     R<ShopDTO> getMerchantInfo(Long merchantId);
@@ -17,6 +28,8 @@ public interface MerchantService extends IService<Merchants> {
     R<String> withdrawApplication(String token, BigDecimal amount, Long bankAccountId);
 
     R<Page> getWithdrawApplications(int page,int pageSize,String token,String status);
+
+
 
     //----------管理员方法---------
     // 管理员分页查询用户申请成为商家的申请

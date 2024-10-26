@@ -5,8 +5,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.watergun.common.R;
 import com.watergun.entity.Products;
 
+import java.util.List;
+
 
 public interface ProductService extends IService<Products> {
+
+    //通过Id批量获取产品
+    List<Products> getProductsByIds(List<Long> productIds);
 
     //创建产品
     R<String> createProduct(String token, Products products);

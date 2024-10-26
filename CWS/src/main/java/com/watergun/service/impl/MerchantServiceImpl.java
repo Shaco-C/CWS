@@ -31,20 +31,58 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     private final WithdrawalRecordsService withdrawalRecordsService;
     private final MerchantApplicationService merchantApplicationService;
 
+    private final PendingAmountLogService pendingAmountLogService;
+
     // 使用构造函数注入依赖
-    public MerchantServiceImpl(JwtUtil jwtUtil,
-                               ProductService productService,
-                               UserService userService,
-                               BankAccountsService bankAccountsService,
+
+    public MerchantServiceImpl(JwtUtil jwtUtil, ProductService productService,
+                               UserService userService, BankAccountsService bankAccountsService,
                                WithdrawalRecordsService withdrawalRecordsService,
-                               MerchantApplicationService merchantApplicationService) {
+                               MerchantApplicationService merchantApplicationService,
+                               PendingAmountLogService pendingAmountLogService) {
         this.jwtUtil = jwtUtil;
         this.productService = productService;
         this.userService = userService;
         this.bankAccountsService = bankAccountsService;
         this.withdrawalRecordsService = withdrawalRecordsService;
         this.merchantApplicationService = merchantApplicationService;
+        this.pendingAmountLogService = pendingAmountLogService;
     }
+
+
+    //---------methods-------------
+
+    @Override
+    public void addPendingAmount(Long merchantId, BigDecimal amount) {
+        log.info("商家{}增加待处理金额{}", merchantId, amount);
+        Merchants merchants = this.getById(merchantId);
+        BigDecimal pendingBalance = merchants.getPendingBalance();
+        BigDecimal newPendingBalance = pendingBalance.add(amount);
+        merchants.setPendingBalance(newPendingBalance);
+        log.info("商家{}的新待处理金额{}", merchantId, newPendingBalance);
+        this.updateById(merchants);
+    }
+
+    //待确认金额变更日志
+    @Override
+    public void addPendingAmountLog(Long merchantId,  BigDecimal amount,String description,String currency) {
+        log.info("商家{}增加待确认金额{}", merchantId, amount);
+        PendingAmountLog pendingAmountLog = new PendingAmountLog();
+        pendingAmountLog.setAmount(amount);
+        pendingAmountLog.setMerchantId(merchantId);
+        pendingAmountLog.setDescription(description);
+        pendingAmountLog.setCurrency(currency);
+
+        boolean result = pendingAmountLogService.save(pendingAmountLog);
+        if (!result){
+            throw new CustomException("添加待确认金额日志失败");
+        }
+        log.info("商家{}的新待确认金额{}", merchantId, amount);
+        log.info("添加待确认金额日志成功");
+
+    }
+
+    //-----------------serviceLogic--------------
 
     @Override
     public R<Merchants> getMerchantByMerchantId(Long merchantId) {
