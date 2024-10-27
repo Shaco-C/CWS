@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
 import com.watergun.dto.requestDTO.CreateOrderRequest;
 import com.watergun.dto.requestDTO.PayOrderRequest;
+import com.watergun.entity.Orders;
 import com.watergun.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +39,6 @@ public class OrdersController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return orderService.payOrders(token,payOrderRequest.getOrderIds(),payOrderRequest.getPaymentMethod());
     }
-
     //用户取消订单
 
     //用户确认收货
@@ -62,4 +62,10 @@ public class OrdersController {
 
         return orderService.merchantsGetOrders(page,pageSize,token,status,returnStatus);
     }
+    //商家发货
+//    @PutMapping("/merchants/shippped")
+//    public R<String> merchantsShipppedProduct(HttpServletRequest request, @RequestBody Orders orders){
+//        String token = request.getHeader("Authorization").replace("Bearer ", "");
+//        return orderService.merchantsShipppedProduct(token,orders);
+//    }
 }

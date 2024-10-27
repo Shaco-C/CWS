@@ -54,19 +54,19 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
     @Override
     public void addPendingAmount(Long merchantId, BigDecimal amount) {
-        log.info("商家{}增加待处理金额{}", merchantId, amount);
+        log.info("addPendingAmount:商家{}增加待处理金额{}", merchantId, amount);
         Merchants merchants = this.getById(merchantId);
         BigDecimal pendingBalance = merchants.getPendingBalance();
         BigDecimal newPendingBalance = pendingBalance.add(amount);
         merchants.setPendingBalance(newPendingBalance);
-        log.info("商家{}的新待处理金额{}", merchantId, newPendingBalance);
+        log.info("addPendingAmount:商家{}的新待处理金额{}", merchantId, newPendingBalance);
         this.updateById(merchants);
     }
 
     //待确认金额变更日志
     @Override
     public void addPendingAmountLog(Long merchantId,  BigDecimal amount,String description,String currency) {
-        log.info("商家{}增加待确认金额{}", merchantId, amount);
+        log.info("addPendingAmountLog:商家{}增加待确认金额{}", merchantId, amount);
         PendingAmountLog pendingAmountLog = new PendingAmountLog();
         pendingAmountLog.setAmount(amount);
         pendingAmountLog.setMerchantId(merchantId);
@@ -77,7 +77,6 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         if (!result){
             throw new CustomException("添加待确认金额日志失败");
         }
-        log.info("商家{}的新待确认金额{}", merchantId, amount);
         log.info("添加待确认金额日志成功");
 
     }

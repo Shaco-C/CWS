@@ -146,6 +146,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
     @Override
     @Transactional
     public R<List<Long>> createOrder(String token, List<Long> productIds, Map<Long, Integer> quantities, Long addressId) {
+        log.info("=========================调用 createOrder方法=========================");
         log.info("Creating order: token={}, productIds={}, quantities={}, addressId={}", token, productIds, quantities, addressId);
 
         // 从 token 中提取用户 ID
@@ -168,6 +169,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             log.error("未找到对应的产品，产品 ID 列表: {}", productIds);
             return R.error("Products not found");
         }
+        log.info("Found products: {}", products);
 
         // 根据 merchantId 对产品进行分组
         Map<Long, List<Products>> productsByMerchant = products.stream()
@@ -180,8 +182,10 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         for (Map.Entry<Long, List<Products>> entry : productsByMerchant.entrySet()) {
             Long merchantId = entry.getKey();
             List<Products> merchantProducts = entry.getValue();
-
+            log.info("Creating order for merchant: {}", merchantId);
+            log.info("Merchant products: {}", merchantProducts);
             // 验证库存并计算商家订单的总价
+            // 检查商品是否属于可购买状态
             BigDecimal totalAmount = BigDecimal.ZERO;
             for (Products product : merchantProducts) {
                 int quantity = quantities.getOrDefault(product.getProductId(), 0);
@@ -189,7 +193,12 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                     log.warn("产品 {} 库存不足或购买数量无效", product.getProductId());
                     return R.error("Product " + product.getName() + " is out of stock or invalid quantity");
                 }
+                if (!product.getIsActive()||!"approved".equals(product.getStatus())){
+                    log.warn("产品 {} 不可购买", product.getProductId());
+                    return R.error("Product " + product.getName() + " is not active");
+                }
                 totalAmount = totalAmount.add(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
+                log.info("Product price: {}, quantity: {}, total amount: {}", product.getPrice(), quantity, totalAmount);
             }
 
             // 创建订单对象，设置用户、商家信息、地址和总金额
@@ -202,25 +211,32 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             order.setReturnStatus("not_requested"); // 设置退货状态为未申请
             order.setTaxAmount(BigDecimal.ZERO); // 暂时设置默认税额为 0 元
             order.setShippingFee(BigDecimal.valueOf(30)); // 暂时设置默认运费为 30 元
-
+            log.info("Creating order for user: {}, merchant: {}, total amount: {}, Tax Amount:{},ShippingFee:{}",
+                    userId, merchantId, totalAmount,order.getTaxAmount(), order.getShippingFee());
             // 保存订单到数据库
             if (!this.save(order)) {
                 log.error("用户 {} 创建商家 {} 的订单失败", userId, merchantId);
                 return R.error("Order creation failed");
             }
             createdOrderIds.add(order.getOrderId()); // 记录订单 ID
+            log.info("Created order with ID: {}", order.getOrderId());
 
             // 创建订单详情并扣减库存
             List<OrderItems> orderDetailsList = new ArrayList<>();
             for (Products product : merchantProducts) {
                 int quantity = quantities.get(product.getProductId());
+                log.info("Creating order details for product: {}, quantity: {}", product.getProductId(), quantity);
 
                 // 扣减库存
                 product.setStock(product.getStock() - quantity);
+                //增加销量
+                product.setSales(product.getSales() + quantity);
                 if (!productService.updateById(product)) {
                     log.error("更新产品 {} 库存失败", product.getProductId());
                     return R.error("Failed to update product stock");
                 }
+                log.info("Updated product {} stock to {}", product.getProductId(), product.getStock());
+                log.info("Updated product {} sales to {}", product.getProductId(), product.getSales());
 
                 // 创建订单详情
                 OrderItems orderDetails = new OrderItems();
@@ -231,6 +247,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                 orderDetails.setPrice(product.getPrice());
                 orderDetails.setReturnStatus("not_requested");
                 orderDetailsList.add(orderDetails);
+
+                log.info("Created order details for product: {}, quantity: {}", product.getProductId(), quantity);
             }
 
             // 批量保存订单详情
@@ -249,8 +267,10 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
     @Override
     @Transactional
     public R<String> payOrders(String token, List<Long> orderIds, String paymentMethod) {
+        log.info("=================调用 payOrders 方法=================");
         // 从 token 中提取用户 ID
         Long userId = jwtUtil.extractUserId(token);
+        log.info("payOrders: User ID extracted from token: {}", userId);
         if (userId == null) {
             log.error("无效的 token，无法提取用户 ID");
             return R.error("Invalid token");
@@ -261,22 +281,38 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             log.error("订单 ID 列表为空，无法进行支付");
             return R.error("Order IDs cannot be empty");
         }
+        log.info("payOrders: Order IDs: {}", orderIds);
 
         // 获取用户传入的订单列表
         List<Orders> ordersToPay = this.getOrdersByIdsAndUserId(orderIds, userId);
+        log.info("payOrders: Orders to pay: {}", ordersToPay);
 
         // 检查订单是否存在，且为待付款状态
         BigDecimal totalAmount = BigDecimal.ZERO;
         Map<Long, BigDecimal> merchantAmountMap = new HashMap<>(); // 存储每个商家应增加的待处理金额
         for (Orders order : ordersToPay) {
+            BigDecimal merchantTotalAmount = BigDecimal.ZERO;
             if (!"pending_payment".equals(order.getStatus())) {
                 log.warn("订单 {} 状态无效，无法支付", order.getOrderId());
                 return R.error("Order " + order.getOrderId() + " is not in pending payment status");
             }
-            totalAmount = totalAmount.add(order.getTotalAmount());
+            //订单总金额
+            merchantTotalAmount=merchantTotalAmount.add(order.getTotalAmount()) //商品总价格
+                    .add(order.getTaxAmount())//税费
+                    .add(order.getShippingFee());//运费
+
+            log.info("payOrders:订单 {} 的商品总价格为: {},税费:{},运费:{}",
+                    order.getOrderId(),order.getTotalAmount(),order.getTaxAmount(),order.getShippingFee());
+            log.info("payOrders:订单 {} 的总金额为: {}", order.getOrderId(), merchantTotalAmount);
 
             // 累加每个商家的订单金额
+            //商家只添加商品总价格
             merchantAmountMap.merge(order.getMerchantId(), order.getTotalAmount(), BigDecimal::add);
+
+            //用户需要支付运费+税费+商品总价格
+            log.info("payOrders:原金额为: {},加上的金额为:{}", totalAmount,merchantTotalAmount);
+            totalAmount = totalAmount.add(merchantTotalAmount); // 累加订单总金额
+            log.info("payOrders:总金额更新为: {}", totalAmount);
         }
 
         // 调用支付服务进行支付 (假设有 `paymentService` 完成支付逻辑)
@@ -285,28 +321,29 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             log.error("用户 {} 的支付失败", userId);
             return R.error("Payment failed");
         }
+        log.info("用户 {} 的支付成功", userId);
 
         // 更新订单状态为已支付并记录支付时间
         for (Orders order : ordersToPay) {
+            log.info("payOrders:订单 {} 的状态为: {}", order.getOrderId(), order.getStatus());
             order.setStatus("pending"); // 设置为已支付待处理状态
             order.setPaymentMethod(paymentMethod);
             this.updateById(order); // 更新订单状态
+            log.info("payOrders:订单 {} 的状态更新为: {}", order.getOrderId(), order.getStatus());
         }
 
         // 更新商家的待处理金额
         for (Map.Entry<Long, BigDecimal> entry : merchantAmountMap.entrySet()) {
             Long merchantId = entry.getKey();
             BigDecimal amountToAdd = entry.getValue();
+
+            log.info("payOrders:商家 {} 的待处理金额增加: {}", merchantId, amountToAdd);
+
             merchantService.addPendingAmount(merchantId, amountToAdd); // 更新商家的待处理金额
             merchantService.addPendingAmountLog(merchantId,amountToAdd,"用户支付订单增加待处理金额","USD");
 
         }
-
-        log.info("用户 ID: {} 的订单支付成功，订单 IDs: {}", userId, orderIds);
+        log.info("用户 ID: {} 的订单支付成功，订单 IDs: {},订单总金额为:{}", userId, orderIds, totalAmount);
         return R.success("Orders paid successfully");
     }
-
-
-
-
 }
