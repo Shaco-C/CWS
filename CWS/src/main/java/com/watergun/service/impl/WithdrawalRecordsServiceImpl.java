@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Service
 @Slf4j
 public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsMapper, WithdrawalRecords> implements WithdrawalRecordsService {
+
     @Async // 异步执行
     public void processWithdrawAsync(WithdrawalRecords withdrawalRecord) {
         log.info("==================processWithdrawAsync===============================");

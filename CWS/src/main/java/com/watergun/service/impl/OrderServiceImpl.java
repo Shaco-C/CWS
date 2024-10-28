@@ -352,8 +352,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
 
             log.info("payOrders:商家 {} 的待处理金额增加: {}", merchantId, amountToAdd);
 
-            merchantService.addPendingAmount(merchantId, amountToAdd); // 更新商家的待处理金额
-            merchantService.addPendingAmountLog(merchantId,amountToAdd,"用户支付订单增加待处理金额","USD");
+            merchantService.modifyPendingAmount(merchantId, amountToAdd); // 更新商家的待处理金额
+            merchantService.modifyPendingAmountLog(merchantId,amountToAdd,"用户支付订单增加待处理金额","USD");
 
         }
         log.info("用户 ID: {} 的订单支付成功，订单 IDs: {},订单总金额为:{}", userId, orderIds, totalAmount);
@@ -401,5 +401,114 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
 
         log.info("订单 {} 已成功发货", orderId);
         return R.success("Order shipped successfully");
+    }
+
+    @Override
+    public R<String> transitProduct(Long orderId) {
+        log.info("======================transitProduct======================");
+        log.info("请求物流，订单 ID: {}", orderId);
+        Orders order = this.getById(orderId);
+        log.info("查询订单是否存在");
+        if (order == null) {
+            log.info("订单 {} 不存在", orderId);
+            return R.error("Order does not exist");
+        }
+        log.info("订单存在");
+        log.info("验证订单状态是否为SHIPPED");
+        if (!OrderStatus.SHIPPED.equals(order.getStatus())) {
+            log.info("订单 {} 状态非已发货", orderId);
+            return R.error("Order status is not shipped");
+        }
+        log.info("订单状态为SHIPPED");
+        order.setStatus(OrderStatus.IN_TRANSIT);
+        String msg = order.getShippingInfo() + "\n" + LocalDateTime.now() + " : 物流已取件,正在发往所在地";
+        order.setShippingInfo(msg);
+        boolean result = this.updateById(order);
+        if (!result) {
+            log.info("更新订单状态失败，订单 ID: {}", orderId);
+            throw new CustomException("Failed to update order status");
+        }
+        log.info("订单 {} 已成功发货", orderId);
+        return R.success("Order transit successfully");
+    }
+
+    //模拟快递送达目的地方法
+    @Override
+    public R<String> deliveredProduct(Long orderId) {
+        log.info("======================deliveredProduct======================");
+        log.info("请求物流，订单 ID: {}", orderId);
+        Orders order = this.getById(orderId);
+        if (order == null) {
+            log.info("订单 {} 不存在", orderId);
+            return R.error("Order does not exist");
+        }
+        log.info("检查订单状态是否为IN_TRANSIT");
+        if (!OrderStatus.IN_TRANSIT.equals(order.getStatus())) {
+            log.info("订单 {} 状态非在途中", orderId);
+            return R.error("Order status is not in transit");
+        }
+        log.info("订单状态为IN_TRANSIT");
+        order.setStatus(OrderStatus.DELIVERED);
+        UserAddress userAddress = userAddressService.getById(order.getAddressId());
+        String msg = order.getShippingInfo() + "\n" + LocalDateTime.now() + " : 物流已送达 "
+                + userAddress.getFullAddress();
+        order.setShippingInfo(msg);
+        boolean result = this.updateById(order);
+        if (!result) {
+            log.info("更新订单状态失败，订单 ID: {}", orderId);
+            return R.error("Failed to update order");
+        }
+        log.info("订单 {} 成功抵达取货点", orderId);
+        return R.success("Order delivered successfully");
+    }
+
+    //用户确认收货
+    @Override
+    @Transactional
+    public R<String> receivedProduct(String token, Long orderId) {
+        log.info("======================receivedProduct======================");
+        log.info("请求物流，订单 ID: {}", orderId);
+        Long userId = jwtUtil.extractUserId(token);
+        if (userId == null) {
+            log.info("用户信息异常");
+            return R.error("User not logged in");
+        }
+        Orders orders = this.getById(orderId);
+        if (orders == null) {
+            log.info("订单 {} 不存在", orderId);
+            return R.error("Order does not exist");
+        }
+        if (!userId.equals(orders.getUserId())) {
+            log.info("用户 {} 无权限确认订单 {} 的收货", userId, orderId);
+            return R.error("User does not have permission to confirm receipt");
+        }
+        if (!OrderStatus.DELIVERED.equals(orders.getStatus())) {
+            log.info("订单 {} 状态非已送达", orderId);
+            return R.error("Order status is not delivered");
+        }
+        log.info("订单 {} 状态为已送达", orderId);
+        log.info("用户 {} 确认收货", userId);
+        orders.setStatus(OrderStatus.RECEIVED);
+        String msg = orders.getShippingInfo() + "\n" + LocalDateTime.now() + " : 用户已确认收货";
+        orders.setShippingInfo(msg);
+        boolean result = this.updateById(orders);
+        if (!result) {
+            log.info("更新订单状态失败，订单 ID: {}", orderId);
+            return R.error("Failed to update order status");
+        }
+        log.info("订单 {} 已成功收货", orderId);
+
+        //将商家待确认金额添加到确认金额中
+        merchantService.modifyWalletBalance(orders.getMerchantId(),orders.getTotalAmount());
+
+        //添加待确认余额变更日志
+        merchantService.modifyPendingAmountLog(orders.getMerchantId(), orders.getTotalAmount().negate(),
+                "用户确认收货，待确认金额转入确认金额", orders.getCurrency());
+
+        //添加确认金额变更日志
+        merchantService.modifyWalletBalanceLog(orders.getMerchantId(),orderId, orders.getTotalAmount(),
+                "用户确认收货，确认金额增加", orders.getCurrency());
+        log.info("订单 {} 已成功收货，商家待确认金额已添加到确认金额中", orderId);
+        return R.success("Order received successfully");
     }
 }

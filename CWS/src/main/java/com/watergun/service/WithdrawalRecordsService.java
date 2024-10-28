@@ -5,4 +5,5 @@ import com.watergun.entity.WithdrawalRecords;
 
 public interface WithdrawalRecordsService extends IService<WithdrawalRecords>  {
     void processWithdrawAsync(WithdrawalRecords withdrawalRecord);
+
 }

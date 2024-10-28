@@ -36,9 +36,28 @@ public class OrdersController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return orderService.payOrders(token,payOrderRequest.getOrderIds(),payOrderRequest.getPaymentMethod());
     }
-    //用户取消订单
+
+    //模拟快递员送货方法
+    //后续再继续实现，现在只是为了实现订单状态改变的临时方法
+    @PutMapping("/transitProduct")
+    public R<String> transitProduct(@RequestParam Long orderId){
+        return orderService.transitProduct(orderId);
+    }
+
+    //模拟快递送达目的地方法
+    //后续再继续实现，现在只是为了实现订单状态改变的临时方法
+    @PutMapping("/deliveredProduct")
+    public R<String> deliveredProduct(@RequestParam Long orderId){
+        return orderService.deliveredProduct(orderId);
+    }
 
     //用户确认收货
+    @PutMapping("/receivedProduct")
+    public R<String> receivedProduct(HttpServletRequest request,@RequestParam Long orderId){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.receivedProduct(token,orderId);
+    }
+    //用户取消订单
 
     //查看历史订单
 

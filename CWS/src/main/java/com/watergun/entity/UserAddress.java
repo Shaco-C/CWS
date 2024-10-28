@@ -38,4 +38,9 @@ public class UserAddress {
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt; // 更新时间
+
+    public String getFullAddress(){
+        return this.getCountry()+" "+this.getState()+" "+this.getCity()+" "
+                +this.getDetailedAddress();
+    }
 }

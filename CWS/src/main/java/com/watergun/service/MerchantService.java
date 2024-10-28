@@ -12,11 +12,16 @@ public interface MerchantService extends IService<Merchants> {
     //--------methods----------
 
     //用户付款之后，金额转入商家的待确认金额
-    void addPendingAmount(Long merchantId, BigDecimal amount);
+    void modifyPendingAmount(Long merchantId, BigDecimal amount);
+
+    //用户收货之后，待确认金额转入确认金额
+    void modifyWalletBalance(Long merchantId, BigDecimal amount);
 
     //待确认金额变更日志
 
-    void addPendingAmountLog(Long merchantId,BigDecimal amount,String description,String currency);
+    void modifyPendingAmountLog(Long merchantId,BigDecimal amount,String description,String currency);
+
+    void modifyWalletBalanceLog(Long merchantId,Long orderId,BigDecimal amount,String description,String currency);
 
 
     //------------serviceLogic----------------

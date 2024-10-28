@@ -36,13 +36,16 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
     private final PendingAmountLogService pendingAmountLogService;
 
+    private final WalletBalanceLogService walletBalanceLogService;
+
     // 使用构造函数注入依赖
 
     public MerchantServiceImpl(JwtUtil jwtUtil, ProductService productService,
                                UserService userService, BankAccountsService bankAccountsService,
                                WithdrawalRecordsService withdrawalRecordsService,
                                MerchantApplicationService merchantApplicationService,
-                               PendingAmountLogService pendingAmountLogService) {
+                               PendingAmountLogService pendingAmountLogService,
+                               WalletBalanceLogService walletBalanceLogService) {
         this.jwtUtil = jwtUtil;
         this.productService = productService;
         this.userService = userService;
@@ -50,26 +53,60 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         this.withdrawalRecordsService = withdrawalRecordsService;
         this.merchantApplicationService = merchantApplicationService;
         this.pendingAmountLogService = pendingAmountLogService;
+        this.walletBalanceLogService = walletBalanceLogService;
     }
 
 
     //---------methods-------------
 
     @Override
-    public void addPendingAmount(Long merchantId, BigDecimal amount) {
+    public void modifyPendingAmount(Long merchantId, BigDecimal amount) {
         log.info("====================addPendingAmount====================");
-        log.info("addPendingAmount:商家{}增加待处理金额{}", merchantId, amount);
+        log.info("addPendingAmount:商家{}修改待处理金额{}", merchantId, amount);
         Merchants merchants = this.getById(merchantId);
+        if (merchants==null){
+            log.info("addPendingAmount:商家{}不存在", merchantId);
+            throw new CustomException("商家不存在");
+        }
         BigDecimal pendingBalance = merchants.getPendingBalance();
         BigDecimal newPendingBalance = pendingBalance.add(amount);
         merchants.setPendingBalance(newPendingBalance);
         log.info("addPendingAmount:商家{}的新待处理金额{}", merchantId, newPendingBalance);
-        this.updateById(merchants);
+        boolean result = this.updateById(merchants);
+        if (!result){
+            log.info("addPendingAmount:商家{}的待处理金额修改失败", merchantId);
+            throw new CustomException("待处理金额修改失败");
+        }
+        log.info("addPendingAmount:商家{}的待处理金额修改成功", merchantId);
+    }
+
+    @Override
+    public void modifyWalletBalance(Long merchantId, BigDecimal amount) {
+        log.info("====================modifyWalletBalance====================");
+        log.info("modifyWalletBalance:商家{}修改钱包余额{}", merchantId, amount);
+        Merchants merchants = this.getById(merchantId);
+        if (merchants==null){
+            log.info("modifyWalletBalance:商家{}不存在", merchantId);
+            throw new CustomException("商家不存在");
+        }
+        log.info("modifyWalletBalance:商家{}的待处理金额{}", merchantId, merchants.getPendingBalance());
+        this.modifyPendingAmount(merchantId, amount.negate());
+        log.info("modifyWalletBalance:商家{}的待处理金额变更：{}", merchantId, amount.negate());
+        BigDecimal walletBalance = merchants.getWalletBalance();
+        BigDecimal newWalletBalance = walletBalance.add(amount);
+        merchants.setWalletBalance(newWalletBalance);
+        log.info("modifyWalletBalance:商家{}的新钱包余额{}", merchantId, newWalletBalance);
+        boolean result = this.updateById(merchants);
+        if (!result){
+            log.info("modifyWalletBalance:商家{}的钱包余额修改失败", merchantId);
+            throw new CustomException("钱包余额修改失败");
+        }
+        log.info("modifyWalletBalance:商家{}的钱包余额修改成功", merchantId);
     }
 
     //待确认金额变更日志
     @Override
-    public void addPendingAmountLog(Long merchantId,  BigDecimal amount,String description,String currency) {
+    public void modifyPendingAmountLog(Long merchantId,  BigDecimal amount,String description,String currency) {
         log.info("====================addPendingAmountLog====================");
         log.info("addPendingAmountLog:商家{}增加待确认金额{}", merchantId, amount);
         PendingAmountLog pendingAmountLog = new PendingAmountLog();
@@ -83,7 +120,32 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
             throw new CustomException("添加待确认金额日志失败");
         }
         log.info("添加待确认金额日志成功");
+    }
 
+    //钱包余额变更日志
+    @Override
+    public void modifyWalletBalanceLog(Long merchantId, Long orderId, BigDecimal amount, String description, String currency) {
+        log.info("====================addWalletBalanceLog====================");
+        log.info("addWalletBalanceLog:商家{}钱包余额变动{}", merchantId, amount);
+        WalletBalanceLog walletBalanceLog = new WalletBalanceLog();
+
+        Merchants merchant = this.getById(merchantId);
+        if (merchant == null) {
+            throw new CustomException("商家不存在");
+        }
+        walletBalanceLog.setMerchantId(merchantId);
+        if (orderId!=null){
+            walletBalanceLog.setOrderId(orderId);
+        }
+        walletBalanceLog.setAmountChange(amount);
+        walletBalanceLog.setNewBalance(merchant.getWalletBalance());
+        walletBalanceLog.setDescription(description);
+        walletBalanceLog.setCurrency(currency);
+        boolean result = walletBalanceLogService.save(walletBalanceLog);
+        if (!result){
+            throw new CustomException("添加钱包余额日志失败");
+        }
+        log.info("添加钱包余额日志成功");
     }
 
     //-----------------serviceLogic--------------
@@ -278,7 +340,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
             return R.error("无效的银行账户");
         }
 
-        // 记录提现申请，状态为 pending
+        // 记录提现申请，状态为 pending(转移到withdrawalRecordsService处理)
         WithdrawalRecords withdrawalRecord = new WithdrawalRecords();
         withdrawalRecord.setMerchantId(userId);
         withdrawalRecord.setAmount(amount);
