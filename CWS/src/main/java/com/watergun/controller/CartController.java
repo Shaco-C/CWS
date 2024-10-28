@@ -5,7 +5,6 @@ import com.watergun.dto.ProductDTO;
 import com.watergun.entity.CartItems;
 import com.watergun.service.CartService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

@@ -16,7 +16,6 @@ import com.watergun.service.MerchantService;
 import com.watergun.service.ProductService;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -213,12 +212,20 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         CartItems existingCartItem = cartItemService.getOne(queryWrapper);
 
         if (existingCartItem != null) {
+            if ((existingCartItem.getQuantity() + cartItems.getQuantity()<=0)){
+                log.info("商品数量不能小于等于0");
+                return R.error("商品数量不能小于等于0");
+            }
             // 商品已存在，更新数量
             existingCartItem.setQuantity(existingCartItem.getQuantity() + cartItems.getQuantity());
             cartItemService.updateById(existingCartItem);
             return R.success("商品数量已更新");
         }
 
+        if (cartItems.getQuantity() <= 0) {
+            log.info("商品数量不能小于等于0");
+            return R.error("商品数量不能小于等于0");
+        }
         cartItems.setCartId(cartId);
         cartItemService.save(cartItems);
 

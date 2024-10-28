@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+
 @Data
 @TableName("order_items")
 @AllArgsConstructor

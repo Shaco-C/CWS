@@ -2,7 +2,6 @@ package com.watergun.controller;
 
 import com.watergun.common.R;
 import com.watergun.service.AIReviewLogService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

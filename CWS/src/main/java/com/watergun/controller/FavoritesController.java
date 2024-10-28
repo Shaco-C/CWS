@@ -4,7 +4,6 @@ import com.watergun.common.R;
 import com.watergun.dto.ProductDTO;
 import com.watergun.service.FavoritesService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.web.bind.annotation.*;
 

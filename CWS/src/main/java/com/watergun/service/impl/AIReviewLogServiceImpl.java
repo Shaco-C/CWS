@@ -9,13 +9,11 @@ import com.watergun.mapper.AIReviewLogsMapper;
 import com.watergun.service.AIReviewLogService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.service.ReviewService;
-import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaOptions;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 

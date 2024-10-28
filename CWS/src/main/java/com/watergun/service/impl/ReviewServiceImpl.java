@@ -15,7 +15,7 @@ import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
 import io.micrometer.common.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;

@@ -15,7 +15,7 @@ import com.watergun.mapper.MerchantsMapper;
 import com.watergun.service.*;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -5,7 +5,6 @@ import com.watergun.common.R;
 import com.watergun.entity.Categories;
 import com.watergun.service.CategoryService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

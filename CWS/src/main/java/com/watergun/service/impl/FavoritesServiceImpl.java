@@ -13,7 +13,6 @@ import com.watergun.service.MerchantService;
 import com.watergun.service.ProductService;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;

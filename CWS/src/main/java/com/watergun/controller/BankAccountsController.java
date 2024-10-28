@@ -5,7 +5,6 @@ import com.watergun.common.R;
 import com.watergun.entity.BankAccounts;
 import com.watergun.service.BankAccountsService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

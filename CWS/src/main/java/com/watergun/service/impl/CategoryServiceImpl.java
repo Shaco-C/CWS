@@ -13,7 +13,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.service.ProductService;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -100,6 +99,13 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
             return R.error("权限不足，只有管理员可以删除分类。");
         }
 
+        //检查该分类下是否还有子分类
+        LambdaQueryWrapper<Categories> categoriesLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        categoriesLambdaQueryWrapper.eq(Categories::getParentId, categoryId);
+        if (this.exists(categoriesLambdaQueryWrapper)) {
+            log.warn("Category {} contains subcategories, cannot be deleted.", categoryId);
+            throw new CustomException("该类别下还有子分类，无法删除");
+        }
         // 检查该分类下是否有商品
         LambdaQueryWrapper<Products> productsLambdaQueryWrapper = new LambdaQueryWrapper<>();
         productsLambdaQueryWrapper.eq(Products::getCategoryId, categoryId);

@@ -6,7 +6,6 @@ import com.watergun.dto.ShopDTO;
 import com.watergun.entity.Merchants;
 import com.watergun.service.MerchantService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
