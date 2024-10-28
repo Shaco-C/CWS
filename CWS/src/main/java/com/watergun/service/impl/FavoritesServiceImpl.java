@@ -39,7 +39,7 @@ public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites
     //添加收藏
     @Override
     public R<String> addToFavorites(String token, Long productId) {
-        log.info("调用addToFavorites方法");
+        log.info("============================调用addToFavorites方法========================");
         log.info("addToFavorites: token={}, productId={}", token, productId);
 
         Long userId =jwtUtil.extractUserId(token);
@@ -64,7 +64,7 @@ public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites
     //移除收藏
     @Override
     public R<String> removeFavorites(String token, Long productId) {
-        log.info("调用removeFavorites方法");
+        log.info("=================================调用removeFavorites方法=======================");
         log.info("removeFavorites: token={}, productId={}", token, productId);
 
         if( token == null || productId == null) {
@@ -87,7 +87,7 @@ public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites
     //获取收藏列表
     @Override
     public R<List<ProductDTO>> getFavorites(String token) {
-        log.info("调用getFavorites方法");
+        log.info("=====================================调用getFavorites方法===========================");
         log.info("getFavorites: token={}", token);
 
         if (token == null) {

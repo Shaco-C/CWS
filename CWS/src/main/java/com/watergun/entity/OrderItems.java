@@ -1,9 +1,12 @@
 package com.watergun.entity;
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.OrderItemsReturnStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 @Data
@@ -17,7 +20,10 @@ public class OrderItems {
     private Long orderId;
     private Long productId;
     private Integer quantity;
-    private String returnStatus;
+
+    @Enumerated(value = EnumType.STRING)
+    private OrderItemsReturnStatus returnStatus;
+
     private BigDecimal price;
 
 }

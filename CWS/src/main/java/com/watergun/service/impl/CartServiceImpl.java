@@ -44,6 +44,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
     @Override
     public R<String> firstCreateCart(Long userId) {
+        log.info("====================firstCreateCart====================");
         log.info("firstCreateCart: userId = {}", userId);
         Cart cart = new Cart();
         if (userId==null){
@@ -60,6 +61,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
     @Override
     public R<String> removeCartByUserId(Long userId) {
+        log.info("====================removeCartByUserId====================");
         log.info("removeCartByuserId: userId = {}", userId);
         if (userId==null){
             log.warn("userId is null");
@@ -76,6 +78,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
     @Override
     public R<List<ProductDTO>> getCartList(String token) {
+        log.info("====================getCartList====================");
         if (token == null) {
             log.warn("token is null");
             return R.error("token is null");
@@ -163,6 +166,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     @Transactional
     @Override
     public R<String> addProductToCartItem(String token, CartItems cartItems) {
+        log.info("========================addProductToCartItem========================");
         log.info("addProductToCartItem:{}", cartItems);
         log.info("token:{}", token);
 
@@ -225,6 +229,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
     //将商品从购物车中去除
     @Override
     public R<String> deleteProductFromCartItem(String token, Long cartItemId) {
+        log.info("========================deleteProductFromCartItem========================");
         log.info("deleteProductFromCartItem:{}", cartItemId);
         log.info("token:{}", token);
 

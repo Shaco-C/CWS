@@ -2,6 +2,7 @@ package com.watergun.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.entity.WithdrawalRecords;
+import com.watergun.enums.WithdrawalRecordsStatus;
 import com.watergun.mapper.WithdrawalRecordsMapper;
 import com.watergun.service.WithdrawalRecordsService;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsMapper, WithdrawalRecords> implements WithdrawalRecordsService {
     @Async // 异步执行
     public void processWithdrawAsync(WithdrawalRecords withdrawalRecord) {
+        log.info("==================processWithdrawAsync===============================");
         log.info("开始处理异步提现申请: 提现记录ID: {}, 金额: {}", withdrawalRecord.getWithdrawalId(), withdrawalRecord.getAmount());
 
         try {
@@ -26,11 +28,11 @@ public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsM
 
             // 更新提现记录状态
             if (bankSuccess) {
-                withdrawalRecord.setStatus("completed");
+                withdrawalRecord.setStatus(WithdrawalRecordsStatus.COMPLETED);
                 withdrawalRecord.setCompletionTime(LocalDateTime.now());
                 log.info("异步提现处理成功: 提现记录ID: {}", withdrawalRecord.getWithdrawalId());
             } else {
-                withdrawalRecord.setStatus("failed");
+                withdrawalRecord.setStatus(WithdrawalRecordsStatus.FAILED);
                 withdrawalRecord.setFailureReason("银行处理失败");
                 log.warn("异步提现处理失败: 提现记录ID: {}, 原因: 银行处理失败", withdrawalRecord.getWithdrawalId());
             }

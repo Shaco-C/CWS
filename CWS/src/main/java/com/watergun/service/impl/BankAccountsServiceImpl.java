@@ -31,6 +31,7 @@ public class BankAccountsServiceImpl extends ServiceImpl<BankAccountsMapper, Ban
     @Override
     @Transactional(readOnly = true)
     public R<Page> getAllBankAccounts(String token, int page, int pageSize) {
+        log.info("======================getAllBankAccounts方法开始======================");
         log.info("getAllBankAccounts方法: token: {}", token);
 
         try {
@@ -69,6 +70,7 @@ public class BankAccountsServiceImpl extends ServiceImpl<BankAccountsMapper, Ban
 
     @Override
     public R<String> addBankAccount(String token, BankAccounts bankAccounts) {
+        log.info("======================addBankAccount方法开始======================");
         log.info("addBankAccount方法: token: {}, bankAccounts: {}", token, bankAccounts);
 
         // 1. 检查token和bankAccounts是否为空
@@ -142,6 +144,7 @@ public class BankAccountsServiceImpl extends ServiceImpl<BankAccountsMapper, Ban
 
     @Override
     public R<String> deleteBankAccount(String token, Long bankAccountId) {
+        log.info("======================deleteBankAccount方法开始======================");
         log.info("deleteBankAccount方法: token: {}, bankAccountId: {}", token, bankAccountId);
 
         try {

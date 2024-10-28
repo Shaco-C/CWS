@@ -1,10 +1,13 @@
 package com.watergun.dto;
 
 import com.watergun.entity.Reviews;
+import com.watergun.enums.ReviewsStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.time.LocalDateTime;
 
 @Data
@@ -16,7 +19,10 @@ public class ReviewDTO {
     private Long userId;
     private Integer rating;
     private String comment;
-    private String status;
+
+    @Enumerated(EnumType.STRING)
+    private ReviewsStatus status;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String username;

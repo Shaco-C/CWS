@@ -6,6 +6,7 @@ import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.entity.Categories;
 import com.watergun.entity.Products;
+import com.watergun.enums.UserRoles;
 import com.watergun.mapper.CategoriesMapper;
 import com.watergun.service.CategoryService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -34,6 +35,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
     //按照parentId分类存储
     @Override
     public R<Map<String, List<Categories>>> getCategorySortedList() {
+        log.info("======================getCategorySortedList======================");
         // 获取所有类别数据
         List<Categories> categoriesList = this.list();
 
@@ -47,11 +49,12 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
     //添加类别
     @Override
     public R<String> addCategories(String token, Categories categories) {
+        log.info("===============================addCategories==================================");
         log.info("token: {}", token);
         log.info("categories: {}", categories);
         String userRole = jwtUtil.extractRole(token);
         Long userId =jwtUtil.extractUserId(token);
-        if (!userRole.equals("admin")) {
+        if (!userRole.equals(UserRoles.ADMIN.name())) {
             log.warn("user {} is trying to add Catrgory",userId);
             return R.error("权限不足");
         }
@@ -65,11 +68,12 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
     //更新类别
     @Override
     public R<String> updateCategories(String token, Categories categories) {
+        log.info("===============================updateCategories==================================");
         log.info("token: {}", token);
         log.info("categories: {}", categories);
         String userRole = jwtUtil.extractRole(token);
         Long userId =jwtUtil.extractUserId(token);
-        if (!userRole.equals("admin")) {
+        if (!userRole.equals(UserRoles.ADMIN.name())) {
             log.warn("user {} is trying to update Catrgory",userId);
             return R.error("权限不足");
         }
@@ -82,6 +86,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
 
     @Override
     public R<String> deleteCategories(String token, Long categoryId) {
+        log.info("===============================deleteCategories==================================");
         log.info("Received request to delete category with ID: {}", categoryId);
         log.info("Token: {}", token);
 
@@ -90,7 +95,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
         Long userId = jwtUtil.extractUserId(token);
 
         // 检查是否为管理员
-        if (!"admin".equals(userRole)) {
+        if (!UserRoles.ADMIN.name().equals(userRole)) {
             log.warn("User {} (role: {}) attempted to delete category without sufficient permissions.", userId, userRole);
             return R.error("权限不足，只有管理员可以删除分类。");
         }
@@ -123,6 +128,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
     //管理员分页查询所有分类标签
     @Override
     public R<Page> adminGetCategoriesPage(int page, int pageSize, Long parentId){
+        log.info("===============================adminGetCategoriesPage==================================");
         log.info("分页查询请求");
         log.info("page = {}, pageSize = {}, parentId = {}", page, pageSize, parentId);
 

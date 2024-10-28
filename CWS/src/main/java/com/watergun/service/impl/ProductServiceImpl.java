@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.R;
 import com.watergun.entity.Products;
+import com.watergun.enums.ProductsStatus;
+import com.watergun.enums.UserRoles;
 import com.watergun.mapper.ProductsMapper;
 import com.watergun.service.ProductService;
 import com.watergun.utils.JwtUtil;
@@ -31,6 +33,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
 
     @Override
     public List<Products> getProductsByIds(List<Long> productIds) {
+        log.info("===================getProductsByIds=====================");
         // 创建条件查询包装器，筛选出匹配的商品ID
         LambdaQueryWrapper<Products> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.in(Products::getProductId, productIds);
@@ -42,7 +45,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     //创建产品
     @Override
     public R<String> createProduct(String token, Products products) {
-      log.info("createProduct method is called");
+
+        log.info("================createProduct==================");
       log.info("token: {}", token);
       log.info("products: {}", products);
 
@@ -52,11 +56,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
       String userRole = jwtUtil.extractRole(token);
       log.info("userRole: {}", userRole);
 
-      if (!userRole.equals("merchant")) {
+      if (!userRole.equals(UserRoles.MERCHANT.name())) {
         return R.error("You are not authorized to create a product");
       }
       products.setMerchantId(userId);
-      products.setStatus("pending");
+      products.setStatus(ProductsStatus.PENDING);
       products.setIsActive(true);
       this.save(products);
       return R.success("Product created successfully");
@@ -65,6 +69,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     //分页查询产品，categoryId为产品种类，sortField为排序字段，sortOrder为排序顺序.也可以对在搜索框中进行模糊搜索
     @Override
     public R<Page> page(int page, int pageSize, Long categoryId, String sortField, String sortOrder, String searchBox) {
+        log.info("===================page=====================");
         log.info("page: {}, pageSize: {}, categoryId: {}, sortField: {}, sortOrder: {}, searchBox: {}", page, pageSize, categoryId, sortField, sortOrder, searchBox);
 
         Page<Products> pageInfo = new Page<>(page, pageSize);
@@ -85,7 +90,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
         }
 
         // 只显示审核通过的和上架的产品
-        productsLambdaQueryWrapper.eq(Products::getStatus, "approved");
+        productsLambdaQueryWrapper.eq(Products::getStatus, ProductsStatus.APPROVED);
         productsLambdaQueryWrapper.eq(Products::getIsActive, true);
 
         // 根据排序字段和排序顺序进行排序
@@ -109,7 +114,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     //3.获取产品评论
     @Override
     public R<Products> getProductDetiails(Long id) {
-        log.info("getProductDetiails method is called");
+        log.info("=======================getProductDetiails method is called=========================");
         log.info("id: {}", id);
 
         Products products = this.getById(id);
@@ -127,14 +132,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
 
     @Override
     public R<String> deleteProduct(String token, Long productId) {
-        log.info("deleteProduct method is called");
+        log.info("==========================deleteProduct method is called=========================");
         log.info("token: {}, productId: {}", token, productId);
         Long userId = jwtUtil.extractUserId(token);
         String userRole = jwtUtil.extractRole(token);
         if (userId == null || token == null || productId == null) {
             return R.error("Invalid request");
         }
-        if (!userRole.equals("merchant")) {
+        if (!userRole.equals(UserRoles.MERCHANT.name())) {
             return R.error("You are not authorized to delete a product");
         }
         Products products = this.getById(productId);
@@ -155,14 +160,14 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     //前端需要回传productId,merchantId
     @Override
     public R<String> updateProduct(String token, Products products) {
-        log.info("updateProduct method is called");
+        log.info("======================updateProduct method is called======================");
         log.info("token: {}, products: {}", token, products);
 
         Long userId = jwtUtil.extractUserId(token);
         String userRole = jwtUtil.extractRole(token);
 
         // 验证用户是否是商家
-        if (!userRole.equals("merchant")) {
+        if (!userRole.equals(UserRoles.MERCHANT.name())) {
             log.warn("User {} is not a merchant, not authorized to update product", userId);
             return R.error("You are not authorized to update a product");
         }
@@ -187,7 +192,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
 
     @Override
     public R<String> setActiveOrInActiveProduct(String token, Long productId, Boolean active) {
-        log.info("setActiveOrInActiveProduct method is called");
+        log.info("====================setActiveOrInActiveProduct method is called========================");
         log.info("setActiveOrInActiveProduct:token: {}, productId: {}, active: {}", token, productId, active);
         Long userId = jwtUtil.extractUserId(token);
         String userRole = jwtUtil.extractRole(token);
@@ -196,7 +201,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
         if (userId == null || token == null || productId == null) {
             return R.error("Invalid request");
         }
-        if (!"merchant".equals(userRole))  {
+        if (!UserRoles.MERCHANT.name().equals(userRole))  {
             return R.error("You are not authorized to update a product");
         }
 
@@ -221,7 +226,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     //商家查看自己的产品
     @Override
     public R<Page> getMyProducts(int page,int pageSize,String token,String sortField, String sortOrder) {
-        log.info("getMyProducts method is called");
+        log.info("=========================getMyProducts method is called=======================");
         log.info("token: {}", token);
         Long userId = jwtUtil.extractUserId(token);
         log.info("userId: {}", userId);
@@ -252,6 +257,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     // 管理员分页查询待审核产品
     @Override
     public R<Page> adminGetProductsPage(int page, int pageSize, String status) {
+        log.info("=========================adminGetProductsPage method is called=======================");
         log.info("Admin querying products - page: {}, pageSize: {}, status: {}", page, pageSize, status);
 
         Page pageInfo = new Page(page, pageSize);
@@ -272,24 +278,28 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     //管理员审核商品是否通过审核
     @Override
     public R<String> adminApproveProduct(Long productId, String status, String token) {
+        log.info("=========================adminApproveProduct method is called=======================");
         log.info("productId: {}, status: {}", productId, status);
         log.info("token: {}", token);
 
         String userRole = jwtUtil.extractRole(token);
         log.info("userRole: {}", userRole);
-        if (!userRole.equals("admin")) {
+        if (!userRole.equals(UserRoles.ADMIN.name())) {
             return R.error("hello, you are not admin");
         }
 
         // 检查状态是否有效
-        if (!status.equals("approved") && !status.equals("rejected")) {
+        if (!status.equals(ProductsStatus.APPROVED.name()) && !status.equals(ProductsStatus.REJECTED.name())) {
             return R.error("Invalid status");
         }
 
         Products products = new Products();
         products.setProductId(productId);
-        products.setStatus(status);
-
+        if (status.equals(ProductsStatus.APPROVED.name())) {
+            products.setStatus(ProductsStatus.APPROVED);
+        }else {
+            products.setStatus(ProductsStatus.REJECTED);
+        }
         if(!this.updateById(products)){
             return R.error("产品审核失败");
         }

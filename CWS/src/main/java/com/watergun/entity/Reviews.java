@@ -1,9 +1,12 @@
 package com.watergun.entity;
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.ReviewsStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.time.LocalDateTime;
 
 @Data
@@ -18,7 +21,9 @@ public class Reviews {
     private Long userId;
     private Integer rating;
     private String comment;
-    private String status;
+    
+    @Enumerated(EnumType.STRING)
+    private ReviewsStatus status;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

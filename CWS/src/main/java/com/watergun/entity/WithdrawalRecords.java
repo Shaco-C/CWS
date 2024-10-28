@@ -1,10 +1,13 @@
 package com.watergun.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.WithdrawalRecordsStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -19,7 +22,9 @@ public class WithdrawalRecords {
 
     private Long merchantId;
     private BigDecimal amount;
-    private String status;
+
+    @Enumerated(EnumType.STRING)
+    private WithdrawalRecordsStatus status;
     private String transactionId;
     private Long bankAccountId;
     private String currency;

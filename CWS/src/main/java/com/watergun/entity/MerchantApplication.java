@@ -1,10 +1,13 @@
 package com.watergun.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.MerchantApplicationsStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.time.LocalDateTime;
 
 @Data
@@ -30,7 +33,8 @@ public class MerchantApplication {
 
     private String shopAvatarUrl; // 店铺头像
 
-    private String status; // 申请状态：pending, approved, rejected
+    @Enumerated(EnumType.STRING)
+    private MerchantApplicationsStatus status; // 申请状态：pending, approved, rejected
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt; // 申请提交时间

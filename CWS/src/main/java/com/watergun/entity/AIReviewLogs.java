@@ -1,9 +1,12 @@
 package com.watergun.entity;
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.AIReviewLogsResult;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.time.LocalDateTime;
 
 @Data
@@ -15,7 +18,8 @@ public class AIReviewLogs {
     private Long logId;
 
     private Long reviewId;
-    private String result;
+    @Enumerated(EnumType.STRING)
+    private AIReviewLogsResult result;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

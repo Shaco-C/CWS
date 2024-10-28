@@ -1,10 +1,13 @@
 package com.watergun.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.ReturnRequestsStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.time.LocalDateTime;
 
 @Data
@@ -24,7 +27,8 @@ public class ReturnRequest {
 
     private String returnReason; // 退货原因
 
-    private String status; // 退货申请状态 ('pending', 'approved', 'rejected')
+    @Enumerated(EnumType.STRING)
+    private ReturnRequestsStatus status; // 退货申请状态 ('PENDING', 'APPROVED', 'REJECTED')
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt; // 申请创建时间
     @TableField(fill = FieldFill.INSERT_UPDATE)

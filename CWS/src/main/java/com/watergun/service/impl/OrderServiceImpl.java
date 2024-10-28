@@ -7,10 +7,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.dto.OrderDTO;
-import com.watergun.entity.OrderItems;
-import com.watergun.entity.Orders;
-import com.watergun.entity.Products;
-import com.watergun.entity.UserAddress;
+import com.watergun.entity.*;
+import com.watergun.enums.*;
 import com.watergun.mapper.OrdersMapper;
 import com.watergun.service.*;
 import com.watergun.utils.JwtUtil;
@@ -53,10 +51,12 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
     //-------------method--------------
     @Override
     public List<Orders> getOrdersByIdsAndUserId(List<Long> orderIds, Long userId) {
+        log.info("========================getOrdersByIdsAndUserId 被调用====================");
         // 检查传入的订单 ID 列表是否为空
         if (orderIds == null || orderIds.isEmpty()) {
             return Collections.emptyList();
         }
+        log.info("订单 ID 列表不为空");
 
         // 构建查询条件
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
@@ -64,7 +64,14 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                 .eq(Orders::getUserId, userId);
 
         // 返回符合条件的订单列表
+        log.info("返回符合条件的订单列表");
         return this.list(queryWrapper);
+    }
+
+    @Override
+    public boolean isOrderBelongsToMerchant(Orders order, Long merchantId) {
+        log.info("========================isOrderBelongsToMerchant 被调用====================");
+        return order.getMerchantId().equals(merchantId);
     }
 
 
@@ -72,6 +79,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
     //-------------serviceLogic-----------
     @Override
     public R<Page> merchantsGetOrders(int page, int pageSize, String token, String status, String returnStatus) {
+        log.info("========================merchantsGetOrders 被调用====================");
         log.info("getOrders 被调用");
         log.info("参数: page={}, pageSize={}, token={}, status={}, returnStatus={}", page, pageSize, token, status, returnStatus);
 
@@ -86,7 +94,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
 
         // 确认用户角色是否为商家
         log.info("商家ID: {}, 用户角色: {}", merchantId, userRole);
-        if (!"merchant".equals(userRole)) {
+        if (!UserRoles.MERCHANT.name().equals(userRole)) {
             log.warn("非法调用 - 非商家用户尝试调用接口");
             throw new CustomException("非法调用");
         }
@@ -158,8 +166,13 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
 
         // 检查地址是否属于用户
         UserAddress address = userAddressService.getById(addressId);
-        if (address == null || !address.getUserId().equals(userId)) {
-            log.error("无效的地址 ID 或地址不属于用户，地址 ID: {}", addressId);
+        if (address == null){
+            log.error("地址不存在，地址ID: {}", addressId);
+            return R.error("Address not found");
+        }
+        log.info("用户ID: {}, 地址ID: {},地址用户ID:{}", userId, addressId,address.getUserId());
+        if ( !address.getUserId().equals(userId)) {
+            log.error("地址不属于用户，地址 ID: {}", addressId);
             return R.error("Invalid address ID");
         }
 
@@ -193,7 +206,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                     log.warn("产品 {} 库存不足或购买数量无效", product.getProductId());
                     return R.error("Product " + product.getName() + " is out of stock or invalid quantity");
                 }
-                if (!product.getIsActive()||!"approved".equals(product.getStatus())){
+                if (!product.getIsActive()||!ProductsStatus.APPROVED.equals(product.getStatus())){
                     log.warn("产品 {} 不可购买", product.getProductId());
                     return R.error("Product " + product.getName() + " is not active");
                 }
@@ -207,8 +220,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             order.setMerchantId(merchantId); // 设置商家 ID
             order.setAddressId(addressId); // 设置用户的收货地址 ID
             order.setTotalAmount(totalAmount);
-            order.setStatus("pending_payment"); // 设置订单状态为待支付，等待用户调用支付接口
-            order.setReturnStatus("not_requested"); // 设置退货状态为未申请
+            order.setStatus(OrderStatus.PENDING_PAYMENT); // 设置订单状态为待支付，等待用户调用支付接口
+            order.setReturnStatus(OrdersReturnStatus.NOT_REQUESTED); // 设置退货状态为未申请
             order.setTaxAmount(BigDecimal.ZERO); // 暂时设置默认税额为 0 元
             order.setShippingFee(BigDecimal.valueOf(30)); // 暂时设置默认运费为 30 元
             log.info("Creating order for user: {}, merchant: {}, total amount: {}, Tax Amount:{},ShippingFee:{}",
@@ -242,10 +255,9 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                 OrderItems orderDetails = new OrderItems();
                 orderDetails.setOrderId(order.getOrderId());
                 orderDetails.setProductId(product.getProductId());
-                orderDetails.setReturnStatus("not_requested");
+                orderDetails.setReturnStatus(OrderItemsReturnStatus.NOT_REQUESTED);
                 orderDetails.setQuantity(quantity);
                 orderDetails.setPrice(product.getPrice());
-                orderDetails.setReturnStatus("not_requested");
                 orderDetailsList.add(orderDetails);
 
                 log.info("Created order details for product: {}, quantity: {}", product.getProductId(), quantity);
@@ -285,6 +297,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
 
         // 获取用户传入的订单列表
         List<Orders> ordersToPay = this.getOrdersByIdsAndUserId(orderIds, userId);
+        log.info("=========getOrdersByIdsAndUserId调用结束==============");
         log.info("payOrders: Orders to pay: {}", ordersToPay);
 
         // 检查订单是否存在，且为待付款状态
@@ -292,7 +305,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         Map<Long, BigDecimal> merchantAmountMap = new HashMap<>(); // 存储每个商家应增加的待处理金额
         for (Orders order : ordersToPay) {
             BigDecimal merchantTotalAmount = BigDecimal.ZERO;
-            if (!"pending_payment".equals(order.getStatus())) {
+            if (!OrderStatus.PENDING_PAYMENT.equals(order.getStatus())) {
                 log.warn("订单 {} 状态无效，无法支付", order.getOrderId());
                 return R.error("Order " + order.getOrderId() + " is not in pending payment status");
             }
@@ -326,7 +339,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         // 更新订单状态为已支付并记录支付时间
         for (Orders order : ordersToPay) {
             log.info("payOrders:订单 {} 的状态为: {}", order.getOrderId(), order.getStatus());
-            order.setStatus("pending"); // 设置为已支付待处理状态
+            order.setStatus(OrderStatus.PENDING); // 设置为已支付待处理状态
             order.setPaymentMethod(paymentMethod);
             this.updateById(order); // 更新订单状态
             log.info("payOrders:订单 {} 的状态更新为: {}", order.getOrderId(), order.getStatus());
@@ -345,5 +358,48 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         }
         log.info("用户 ID: {} 的订单支付成功，订单 IDs: {},订单总金额为:{}", userId, orderIds, totalAmount);
         return R.success("Orders paid successfully");
+    }
+
+    //商家发货
+    @Override
+    @Transactional
+    public R<String> merchantsShipppedProduct(String token, Long orderId) {
+        log.info("======================merchantsShipppedProduct======================");
+        log.info("商家 {} 请求发货，订单 ID: {}", token, orderId);
+
+        Long merchantId = jwtUtil.extractUserId(token);
+        if (merchantId == null) {
+            log.error("无效的商家ID");
+            return R.error("Invalid merchant ID");
+        }
+
+        Orders order = this.getById(orderId);
+        if (order == null) {
+            log.error("订单 {} 不存在", orderId);
+            return R.error("Order does not exist");
+        }
+
+        if (!isOrderBelongsToMerchant(order, merchantId)) {
+            log.error("订单 {} 不属于商家 {}", orderId, merchantId);
+            return R.error("Unauthorized access");
+        }
+
+        if (!OrderStatus.PENDING.equals(order.getStatus())) {
+            log.warn("订单 {} 状态非待发货", orderId);
+            return R.error("Order status is not pending");
+        }
+
+        Merchants merchants = merchantService.getById(merchantId);
+        order.setStatus(OrderStatus.SHIPPED);
+        order.setShippingInfo("\n" + LocalDateTime.now() + " : 商家已从 " + merchants.getAddress() + " 发货");
+
+        boolean isUpdated = this.updateById(order);
+        if (!isUpdated) {
+            log.error("更新订单状态失败，订单 ID: {}", orderId);
+            throw new CustomException("Failed to update order status");
+        }
+
+        log.info("订单 {} 已成功发货", orderId);
+        return R.success("Order shipped successfully");
     }
 }

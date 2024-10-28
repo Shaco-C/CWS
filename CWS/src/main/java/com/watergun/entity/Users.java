@@ -2,10 +2,13 @@ package com.watergun.entity;
 
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.UserRoles;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.time.LocalDateTime;
 
 @Data
@@ -20,7 +23,10 @@ public class Users {
     private String email;
     private String password;
     private String phoneNumber;
-    private String role; // admin , merchant , user
+
+    @Enumerated(EnumType.STRING) // 保存为字符串
+    private UserRoles role; // ADMIN,MERCHANT,USER
+
     private String language;
     private String avatarUrl;
 

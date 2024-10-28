@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.R;
 import com.watergun.entity.MerchantApplication;
 import com.watergun.entity.Users;
+import com.watergun.enums.MerchantApplicationsStatus;
+import com.watergun.enums.UserRoles;
 import com.watergun.mapper.UsersMapper;
 import com.watergun.service.MerchantApplicationService;
 import com.watergun.service.UserService;
@@ -13,7 +15,7 @@ import com.watergun.utils.JwtUtil;
 import io.micrometer.common.util.StringUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
 
     @Override
     public List<Users> getUsersByIds(List<Long> userIds) {
+        log.info("==================getUsersByIds======================");
         if (userIds == null || userIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -48,6 +51,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     //登陆
     @Override
     public R<String> login(HttpServletRequest request, Users user) {
+        log.info("====================login==============================");
         log.info("请求登陆的user信息为{}",user);
         // 根据用户提交的邮箱查询数据库
         LambdaQueryWrapper<Users> queryWrapper = new LambdaQueryWrapper<>();
@@ -66,7 +70,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         }
 
         // 登录成功，生成 JWT
-        String token = jwtUtil.generateToken(users.getEmail(), users.getRole(), users.getUserId());
+        String token = jwtUtil.generateToken(users.getEmail(), users.getRole().name(), users.getUserId());
         log.info("token为:{}",token);
         // 将用户 ID 存入 Session（可选）
         request.getSession().setAttribute("UserId", users.getUserId());
@@ -80,6 +84,7 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     @Override
     @Transactional
     public R<Users> createUser(Users user) {
+        log.info("====================createUser==============================");
         log.info("调用创建用户请求");
         log.info("user: {}", user);
         String password = user.getPassword();
@@ -94,17 +99,18 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     //用户更新自己的信息
     @Override
     public R<String> updateUser(String token, Users user) {
+        log.info("====================updateUser==============================");
         log.info("调用更新用户请求");
         log.info("user: {}", user);
         log.info("token: {}", token);
         Long userId = jwtUtil.extractUserId(token);
         log.info("userId: {}", userId);
         String userRole = jwtUtil.extractRole(token);
-        if (!userId.equals(user.getUserId())&&!"admin".equals(userRole)){
+        if (!userId.equals(user.getUserId())&&!UserRoles.ADMIN.name().equals(userRole)){
             log.warn("用户ID {} 尝试修改非本人信息，当前角色: {}", userId, userRole);
             return R.error("无权限");
         }
-        if ("user".equals(userRole) && (user.getRole() == null || !"user".equals(user.getRole()))) {
+        if (UserRoles.USER.name().equals(userRole) && (user.getRole() == null || !UserRoles.USER.equals(user.getRole()))) {
             log.warn("用户ID {} 尝试修改权限，当前角色: {}", userId, userRole);
             return R.error("请不要修改自己的权限");
         }
@@ -119,12 +125,13 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     @Override
     @Transactional
     public R<String> deleteUser(String token, Long userId) {
+        log.info("====================deleteUser==============================");
         log.info("调用删除用户请求");
         log.info("token: {}", token);
         log.info("userId: {}", userId);
         Long userIdNow = jwtUtil.extractUserId(token);
         String userRole =jwtUtil.extractRole(token);
-        if (!userRole.equals("admin")&&!userIdNow.equals(userId)){
+        if (!userRole.equals(UserRoles.ADMIN.name())&&!userIdNow.equals(userId)){
             return R.error("无权限");
         }
         log.info("删除用户:{}",userId);
@@ -136,15 +143,16 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     @Override
     @Transactional
     public R<String> merchantApplication(String token, MerchantApplication merchantApplication) {
+        log.info("====================merchantApplication==============================");
         log.info("调用商家申请请求");
         log.info("token: {}", token);
         log.info("merchantApplication: {}", merchantApplication);
         Long userId = jwtUtil.extractUserId(token);
         String userRole =jwtUtil.extractRole(token);
-        if (!"user".equals(userRole)){
+        if (!UserRoles.USER.name().equals(userRole)){
             return R.error("管理员或商家不能够申请成为商家");
         }
-        merchantApplication.setStatus("pending");
+        merchantApplication.setStatus(MerchantApplicationsStatus.PENDING);
         merchantApplication.setUserId(userId);
         merchantApplicationService.save(merchantApplication);
         return R.success("申请成功");
@@ -155,16 +163,30 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
     //管理员查看所有用户请求
     @Override
     public R<Page> adminGetUsersPage(int page, int pageSize, String role) {
+        log.info("====================adminGetUsersPage==============================");
         log.info("分页查询请求");
-        log.info("page = {}, pageSize = {}, role = {}",page,pageSize,role);
-        Page pageInfo = new Page(page,pageSize);
-        log.info("查看Users表信息");
-        LambdaQueryWrapper<Users> lambdaQueryWrapper = new LambdaQueryWrapper();
-        lambdaQueryWrapper.like(StringUtils.isNotEmpty(role),Users::getRole,role);
-        lambdaQueryWrapper.orderByDesc(Users::getUpdatedAt);
+        log.info("page = {}, pageSize = {}, role = {}", page, pageSize, role);
 
-        this.page(pageInfo,lambdaQueryWrapper);
+        Page pageInfo = new Page(page, pageSize);
+        log.info("查看 Users 表信息");
+
+        // 构造查询条件
+        LambdaQueryWrapper<Users> lambdaQueryWrapper = new LambdaQueryWrapper<>();
+        if (StringUtils.isNotEmpty(role)) {
+            // 确保 role 与数据库中存储的格式一致
+            try {
+                String roleEnum = UserRoles.valueOf(role.toUpperCase()).name();
+                lambdaQueryWrapper.like(Users::getRole, roleEnum);
+            } catch (IllegalArgumentException e) {
+                log.warn("传入的角色 {} 无效，将返回所有用户", role);
+            }
+        }
+
+        lambdaQueryWrapper.orderByDesc(Users::getUpdatedAt);
+        this.page(pageInfo, lambdaQueryWrapper);
+
         return R.success(pageInfo);
     }
+
 
 }

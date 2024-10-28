@@ -1,9 +1,13 @@
 package com.watergun.entity;
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.OrderStatus;
+import com.watergun.enums.OrdersReturnStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 @Data
@@ -23,8 +27,12 @@ public class Orders {
 
     private String trackingNumber; //快递单号
     private String currency;
-    private String status;
-    private String returnStatus;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
+    @Enumerated(EnumType.STRING)
+    private OrdersReturnStatus returnStatus;
+
     private String paymentMethod;
     private String shippingInfo;
 

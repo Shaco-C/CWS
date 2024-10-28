@@ -63,9 +63,9 @@ public class OrdersController {
         return orderService.merchantsGetOrders(page,pageSize,token,status,returnStatus);
     }
     //商家发货
-//    @PutMapping("/merchants/shippped")
-//    public R<String> merchantsShipppedProduct(HttpServletRequest request, @RequestBody Orders orders){
-//        String token = request.getHeader("Authorization").replace("Bearer ", "");
-//        return orderService.merchantsShipppedProduct(token,orders);
-//    }
+    @PutMapping("/merchants/shippped")
+    public R<String> merchantsShipppedProduct(HttpServletRequest request,@RequestParam Long orderId){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.merchantsShipppedProduct(token,orderId);
+    }
 }

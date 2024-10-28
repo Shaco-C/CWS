@@ -7,6 +7,8 @@ import com.watergun.common.R;
 import com.watergun.dto.ReviewDTO;
 import com.watergun.entity.Reviews;
 import com.watergun.entity.Users;
+import com.watergun.enums.ReviewsStatus;
+import com.watergun.enums.UserRoles;
 import com.watergun.mapper.ReviewsMapper;
 import com.watergun.service.ReviewService;
 import com.watergun.service.UserService;
@@ -36,14 +38,14 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
     //展示产品通过审核的评论
     @Override
     public R<Page> getApprovedReviewsByProductId(Long productId, int page, int pageSize) {
-
+        log.info("=====================getApprovedReviewsByProductId=========================");
         // 创建分页对象
         Page<Reviews> pageInfo = new Page<>(page, pageSize);
 
         // 查询所有通过审核的评论，并分页
         LambdaQueryWrapper<Reviews> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Reviews::getProductId, productId)
-                .eq(Reviews::getStatus, "approved")
+                .eq(Reviews::getStatus, ReviewsStatus.APPROVED)
                 .orderByDesc(Reviews::getUpdatedAt);
 
         // 使用分页查询
@@ -81,6 +83,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
     //用户发表评论
     @Override
     public R<Reviews> createReview(String token, Reviews review) {
+        log.info("=====================createReview=========================");
         log.info("调用用户发表评论请求");
         log.info("token: {}", token);
         log.info("review: {}", review);
@@ -88,7 +91,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         Long userId = jwtUtil.extractUserId(token);
         log.info("userId: {}", userId);
 
-        review.setStatus("pending");
+        review.setStatus(ReviewsStatus.PENDING);
         review.setUserId(userId);
         log.info("review: {}", review);
 
@@ -102,6 +105,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
     //更新评论
     @Override
     public R<Reviews> updateReview(Long reviewId, String token, Reviews reviewDetails) {
+        log.info("=====================updateReview=========================");
         log.info("调用用户更新评论请求");
         log.info("reviewId: {}", reviewId);
         log.info("token: {}", token);
@@ -124,7 +128,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         //更新评论内容
         review.setComment(reviewDetails.getComment());
         review.setRating(reviewDetails.getRating());
-        review.setStatus("pending");
+        review.setStatus(ReviewsStatus.PENDING);
         boolean result = this.updateById(review);
         if (!result){
             return R.error("评论更新失败");
@@ -135,6 +139,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
     //删除评论
     @Override
     public R<String> deleteReview(Long reviewId, String token) {
+        log.info("=====================deleteReview=========================");
         log.info("调用用户删除评论请求");
         log.info("reviewId: {}", reviewId);
         log.info("token: {}", token);
@@ -151,7 +156,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
             return R.error("评论不存在");
         }
         //检查评论是否属于当前用户或管理员
-        if (!review.getUserId().equals(userId) && !userRole.equals("admin")) {
+        if (!review.getUserId().equals(userId) && !userRole.equals(UserRoles.ADMIN.name())) {
             return R.error("你无权删除这条评论");
         }
         this.removeById(reviewId);
@@ -160,6 +165,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
 
     @Override
     public R<Page> getUserselfReviews(int page, int pageSize, String token) {
+        log.info("=====================getUserselfReviews=========================");
         log.info("调用用户获取自己的评论请求");
         log.info("page: {}", page);
         log.info("pageSize: {}", pageSize);
@@ -182,6 +188,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
     //展示所有评论，按照status进行分类，如果前端没传默认查询所有的评论  (对管理员)
     @Override
     public R<Page> adminGetReviewsPage(int page, int pageSize, String status){
+        log.info("=====================adminGetReviewsPage=========================");
         log.info("page: {}, pageSize: {}, status: {}", page, pageSize, status);
         Page pageInfo = new Page(page,pageSize);
         log.info("查看评论");
@@ -195,14 +202,20 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
     // 管理员审核评论（通过或拒绝）
     @Override
     public R<String> reviewStatus(Long reviewId, String status, String token){
+        log.info("=====================reviewStatus=========================");
         log.info("token: {}", token);
         // 提取 JWT 中的用户角色
         String userRole = jwtUtil.extractRole(token);
         log.info("userRole: {}", userRole);
 
         // 检查用户是否是管理员
-        if (!"admin".equals(userRole)) {
+        if (!UserRoles.ADMIN.name().equals(userRole)) {
             return R.error("你无权进行审核操作");
+        }
+
+        //检查传入数据status是否合法
+        if (!ReviewsStatus.APPROVED.name().equals(status) && !ReviewsStatus.REJECTED.name().equals(status)) {
+            return R.error("status参数不合法");
         }
 
         // 根据评论ID获取评论详情
@@ -212,7 +225,11 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         }
 
         // 更新评论状态
-        review.setStatus(status);
+        if (ReviewsStatus.APPROVED.name().equals(status)) {
+            review.setStatus(ReviewsStatus.APPROVED);
+        }else{
+            review.setStatus(ReviewsStatus.REJECTED);
+        }
         this.updateById(review);
 
         return R.success("评论状态更新为: " + status);

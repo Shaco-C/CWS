@@ -2,10 +2,13 @@ package com.watergun.entity;
 
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.watergun.enums.ProductsStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -26,7 +29,9 @@ public class Products {
     private Long categoryId;
     private String imageUrl;
     private Integer sales;
-    private String status; //'pending', 'approved', 'rejected'
+
+    @Enumerated(value = EnumType.STRING)
+    private ProductsStatus status; //'pending', 'approved', 'rejected'
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

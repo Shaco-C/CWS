@@ -50,6 +50,7 @@ public class CartController {
     }
 
 
+
     @DeleteMapping("/{cartItemId}")
     public R<String> deleteProductFromCartItem(HttpServletRequest request, @PathVariable Long cartItemId){
         // 从请求头中获取 JWT

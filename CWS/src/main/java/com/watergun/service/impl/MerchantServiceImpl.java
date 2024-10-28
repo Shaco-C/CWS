@@ -8,6 +8,9 @@ import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.dto.ShopDTO;
 import com.watergun.entity.*;
+import com.watergun.enums.MerchantApplicationsStatus;
+import com.watergun.enums.UserRoles;
+import com.watergun.enums.WithdrawalRecordsStatus;
 import com.watergun.mapper.MerchantsMapper;
 import com.watergun.service.*;
 import com.watergun.utils.JwtUtil;
@@ -54,6 +57,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
     @Override
     public void addPendingAmount(Long merchantId, BigDecimal amount) {
+        log.info("====================addPendingAmount====================");
         log.info("addPendingAmount:商家{}增加待处理金额{}", merchantId, amount);
         Merchants merchants = this.getById(merchantId);
         BigDecimal pendingBalance = merchants.getPendingBalance();
@@ -66,6 +70,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     //待确认金额变更日志
     @Override
     public void addPendingAmountLog(Long merchantId,  BigDecimal amount,String description,String currency) {
+        log.info("====================addPendingAmountLog====================");
         log.info("addPendingAmountLog:商家{}增加待确认金额{}", merchantId, amount);
         PendingAmountLog pendingAmountLog = new PendingAmountLog();
         pendingAmountLog.setAmount(amount);
@@ -85,6 +90,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
     @Override
     public R<Merchants> getMerchantByMerchantId(Long merchantId) {
+        log.info("=======================getMerchantByMerchantId=========================");
         log.info("获取商家信息，商家ID: {}", merchantId);
         if (merchantId == null) {
             return R.error("商家ID不能为空");
@@ -98,6 +104,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
     @Override
     public R<String> updateMerchant(String token, Merchants merchants) {
+        log.info("=======================updateMerchant=========================");
         log.info("token: {}", token);
         log.info("merchants: {}", merchants);
 
@@ -111,7 +118,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         log.info("商家ID: {}", merchantId);
         log.info("userRole: {}", userRole);
         // 如果是管理员，可以修改任何商家信息
-        if ("admin".equals(userRole)) {
+        if (UserRoles.ADMIN.name().equals(userRole)) {
             log.info("管理员{}正在修改商家信息", merchantId);
         } else if (merchantId == null || !merchantId.equals(merchants.getMerchantId())) {
             // 如果是商家本人，必须匹配商家ID
@@ -131,6 +138,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     //可化简，多余方法ShopDTO
     @Override
     public R<ShopDTO> getMerchantInfo(Long merchantId) {
+        log.info("=======================getMerchantInfo=========================");
         log.info("获取商家信息，商家ID: {}", merchantId);
 
         if (merchantId == null) {
@@ -165,6 +173,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     @Override
     @Transactional
     public R<String> deleteMerchant(String token) {
+        log.info("=======================deleteMerchant=========================");
         log.info("deleteMerchant已经被调用");
         log.debug("token: {}", token);
 
@@ -195,7 +204,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         }
 
         // 检查角色是否为商家
-        if (!"merchant".equals(userRole)) {
+        if (!UserRoles.MERCHANT.name().equals(userRole)) {
             log.warn("非法调用");
             throw new CustomException("非法调用");
         }
@@ -203,7 +212,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         // 将商家角色改为普通用户
         Users users = new Users();
         users.setUserId(merchantId);
-        users.setRole("user");
+        users.setRole(UserRoles.USER);
 
         boolean userUpdateResult = userService.updateById(users);
         if (!userUpdateResult) {
@@ -224,12 +233,13 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     @Override
     @Transactional
     public R<String> withdrawApplication(String token, BigDecimal amount, Long bankAccountId) {
+        log.info("=======================withdrawApplication=========================");
         log.info("withdraw方法: token: {}, amount: {}, bankAccountId: {}", token, amount, bankAccountId);
 
         // 校验用户身份
         String userRole = jwtUtil.extractRole(token);
         Long userId = jwtUtil.extractUserId(token);
-        if (!"merchant".equals(userRole)) {
+        if (!UserRoles.MERCHANT.name().equals(userRole)) {
             log.warn("withdraw方法: 非法用户角色尝试提现");
             return R.error("只有商家角色可以进行提现操作");
         }
@@ -272,7 +282,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         WithdrawalRecords withdrawalRecord = new WithdrawalRecords();
         withdrawalRecord.setMerchantId(userId);
         withdrawalRecord.setAmount(amount);
-        withdrawalRecord.setStatus("pending"); // 初始状态为 pending
+        withdrawalRecord.setStatus(WithdrawalRecordsStatus.PENDING); // 初始状态为 pending
         withdrawalRecord.setBankAccountId(bankAccountId);
         withdrawalRecord.setCurrency("CNY"); // 根据需求动态设定货币类型
         withdrawalRecord.setRequestTime(LocalDateTime.now());
@@ -301,6 +311,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     @Override
     @Transactional(readOnly = true)
     public R<Page> getWithdrawApplications(int page, int pageSize, String token, String status) {
+        log.info("=======================getWithdrawApplications=========================");
         log.info("getWithdrawApplications方法: page: {}, pageSize: {}, token: {}, status: {}", page, pageSize, token, status);
 
         // 校验用户身份
@@ -309,7 +320,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
             Long userId = jwtUtil.extractUserId(token);
 
             log.info("getWithdrawApplications方法: userRole: {}, userId: {}", userRole, userId);
-            if (!"merchant".equals(userRole)) {
+            if (!UserRoles.MERCHANT.name().equals(userRole)) {
                 log.warn("getWithdrawApplications方法: 非法用户角色尝试获取提现申请");
                 return R.error("只有商家角色可以获取提现申请");
             }
@@ -338,6 +349,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     // 管理员分页查询用户申请成为商家的申请
     @Override
     public R<Page> adminGetMerchantApplicationPage(int page, int pageSize, String status) {
+        log.info("=======================adminGetMerchantApplicationPage=========================");
         log.info("Admin querying merchant applications - page: {}, pageSize: {}, status: {}", page, pageSize, status);
 
         Page pageInfo = new Page(page,pageSize);
@@ -353,12 +365,13 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     @Override
     @Transactional
     public R<String> adminApproveMerchantApplication(Long merchantApplicationId,String status,String token){
+        log.info("=======================adminApproveMerchantApplication=========================");
         log.info("merchantId: {}, status: {}", merchantApplicationId, status);
         log.info("token: {}", token);
 
         String userRole = jwtUtil.extractRole(token);
         log.info("userRole: {}", userRole);
-        if (!"admin".equals(userRole)) {
+        if (!UserRoles.ADMIN.name().equals(userRole)) {
             return R.error("hello, you are not admin");
         }
 
@@ -369,15 +382,15 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         //申请表详细信息
         MerchantApplication merchantApplication = merchantApplicationService.getOne(merchantApplicationLambdaQueryWrapper);
 
-        if ("rejected".equals(status)){
-            merchantApplication.setStatus("rejected");
+        if ("REJECTED".equals(status)){
+            merchantApplication.setStatus(MerchantApplicationsStatus.REJECTED);
             merchantApplicationService.updateById(merchantApplication);
             return R.success("用户成为商家申请被拒绝");
         }
 
         //从这开始之后就是申请通过的逻辑了
         //更新申请表信息
-        merchantApplication.setStatus("approved");
+        merchantApplication.setStatus(MerchantApplicationsStatus.APPROVED);
         merchantApplicationService.updateById(merchantApplication);
 
         //将申请表信息注入商家表
@@ -396,7 +409,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
         //同时也要更新用户表，将用户角色改为商家
         Users users = new Users();
-        users.setRole("merchant");
+        users.setRole(UserRoles.MERCHANT);
         users.setUserId(merchantApplication.getUserId());
         userService.updateById(users);
 

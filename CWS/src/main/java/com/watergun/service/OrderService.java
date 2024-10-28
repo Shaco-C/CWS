@@ -12,6 +12,7 @@ import java.util.Map;
 public interface OrderService extends IService<Orders> {
     //------------methods----------
     List<Orders> getOrdersByIdsAndUserId(List<Long> orderIds,Long userId);
+    boolean isOrderBelongsToMerchant(Orders order, Long merchantId);
 
 
     //------------serviceLogic---------
@@ -22,4 +23,6 @@ public interface OrderService extends IService<Orders> {
 
     //用户支付订单
     R<String> payOrders(String token,List<Long> orderIds, String paymentMethod);
+    //商家发货
+    R<String> merchantsShipppedProduct(String token,Long orderId);
 }
