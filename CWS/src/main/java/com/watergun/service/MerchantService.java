@@ -30,10 +30,6 @@ public interface MerchantService extends IService<Merchants> {
     R<ShopDTO> getMerchantInfo(Long merchantId);
     R<String> deleteMerchant(String token);
 
-    R<String> withdrawApplication(String token, BigDecimal amount, Long bankAccountId);
-
-    R<Page> getWithdrawApplications(int page,int pageSize,String token,String status);
-
 
 
     //----------管理员方法---------

@@ -48,27 +48,10 @@ public class MerchantsController {
         return merchantService.deleteMerchant(token);
     }
 
-    //申请提现钱包中的钱
-    @PutMapping("/withdraw")
-    public R<String> withdraw(HttpServletRequest request,@RequestParam BigDecimal amount,@RequestParam Long bankAccountId){
-        String token = request.getHeader("Authorization").replace("Bearer ", "");
-        return merchantService.withdrawApplication(token, amount,bankAccountId);
-    }
-
-    //查看商店的提现记录
-    @GetMapping("/getWithdrawApplications")
-    public R<Page> getWithdrawApplications(@RequestParam(value = "page", defaultValue = "1") int page,
-                             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
-                             HttpServletRequest request, String status){
-        String token = request.getHeader("Authorization").replace("Bearer ", "");
-        return merchantService.getWithdrawApplications(page,pageSize,token,status);
-    }
 
     //查看商店特定日期范围的营业额
 
     //处理退货请求
-
-    //待确认金额转为确认金额
 
     //----------管理员方法---------
     // 管理员分页查询用户申请成为商家的申请

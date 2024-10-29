@@ -10,7 +10,6 @@ import com.watergun.dto.ShopDTO;
 import com.watergun.entity.*;
 import com.watergun.enums.MerchantApplicationsStatus;
 import com.watergun.enums.UserRoles;
-import com.watergun.enums.WithdrawalRecordsStatus;
 import com.watergun.mapper.MerchantsMapper;
 import com.watergun.service.*;
 import com.watergun.utils.JwtUtil;
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,10 +28,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     private final JwtUtil jwtUtil;
     private final ProductService productService;
     private final UserService userService;
-    private final BankAccountsService bankAccountsService;
-    private final WithdrawalRecordsService withdrawalRecordsService;
     private final MerchantApplicationService merchantApplicationService;
-
     private final PendingAmountLogService pendingAmountLogService;
 
     private final WalletBalanceLogService walletBalanceLogService;
@@ -41,16 +36,13 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     // 使用构造函数注入依赖
 
     public MerchantServiceImpl(JwtUtil jwtUtil, ProductService productService,
-                               UserService userService, BankAccountsService bankAccountsService,
-                               WithdrawalRecordsService withdrawalRecordsService,
+                               UserService userService,
                                MerchantApplicationService merchantApplicationService,
                                PendingAmountLogService pendingAmountLogService,
                                WalletBalanceLogService walletBalanceLogService) {
         this.jwtUtil = jwtUtil;
         this.productService = productService;
         this.userService = userService;
-        this.bankAccountsService = bankAccountsService;
-        this.withdrawalRecordsService = withdrawalRecordsService;
         this.merchantApplicationService = merchantApplicationService;
         this.pendingAmountLogService = pendingAmountLogService;
         this.walletBalanceLogService = walletBalanceLogService;
@@ -80,6 +72,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         log.info("addPendingAmount:商家{}的待处理金额修改成功", merchantId);
     }
 
+    //待确认金额转入确认金额
     @Override
     public void modifyWalletBalance(Long merchantId, BigDecimal amount) {
         log.info("====================modifyWalletBalance====================");
@@ -292,118 +285,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         return R.success("商家删除成功");
     }
 
-    @Override
-    @Transactional
-    public R<String> withdrawApplication(String token, BigDecimal amount, Long bankAccountId) {
-        log.info("=======================withdrawApplication=========================");
-        log.info("withdraw方法: token: {}, amount: {}, bankAccountId: {}", token, amount, bankAccountId);
 
-        // 校验用户身份
-        String userRole = jwtUtil.extractRole(token);
-        Long userId = jwtUtil.extractUserId(token);
-        if (!UserRoles.MERCHANT.name().equals(userRole)) {
-            log.warn("withdraw方法: 非法用户角色尝试提现");
-            return R.error("只有商家角色可以进行提现操作");
-        }
-
-        // 校验提现金额
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("withdraw方法: 提现金额不合法");
-            return R.error("提现金额不合法");
-        }
-
-        // 检查提现金额是否过大
-        BigDecimal maxWithdrawLimit = new BigDecimal("10000.00"); // 假设最大一次提现上限为10000
-        if (amount.compareTo(maxWithdrawLimit) > 0) {
-            log.warn("withdraw方法: 提现金额超过最大限制");
-            return R.error("提现金额超过最大限制");
-        }
-
-        // 检查商家信息
-        Merchants merchants = this.getById(userId);
-        if (merchants == null) {
-            log.warn("withdraw方法: 商家不存在");
-            return R.error("商家不存在");
-        }
-
-        // 校验余额是否足够
-        BigDecimal walletBalance = merchants.getWalletBalance();
-        if (walletBalance.compareTo(amount) < 0) {
-            log.warn("withdraw方法: 商家余额不足，当前余额: {}, 请求提现金额: {}", walletBalance, amount);
-            return R.error("商家余额不足");
-        }
-
-        // 校验银行账户是否存在
-        BankAccounts bankAccount = bankAccountsService.getById(bankAccountId);
-        if (bankAccount == null || !bankAccount.getUserId().equals(userId)) {
-            log.warn("withdraw方法: 银行账户不存在或不属于当前商家");
-            return R.error("无效的银行账户");
-        }
-
-        // 记录提现申请，状态为 pending(转移到withdrawalRecordsService处理)
-        WithdrawalRecords withdrawalRecord = new WithdrawalRecords();
-        withdrawalRecord.setMerchantId(userId);
-        withdrawalRecord.setAmount(amount);
-        withdrawalRecord.setStatus(WithdrawalRecordsStatus.PENDING); // 初始状态为 pending
-        withdrawalRecord.setBankAccountId(bankAccountId);
-        withdrawalRecord.setCurrency("CNY"); // 根据需求动态设定货币类型
-        withdrawalRecord.setRequestTime(LocalDateTime.now());
-
-        boolean recordSaved = withdrawalRecordsService.save(withdrawalRecord);
-        if (!recordSaved) {
-            log.warn("withdraw方法: 提现记录保存失败");
-            return R.error("提现申请失败");
-        }
-
-        // 扣除余额并更新商家信息
-        merchants.setWalletBalance(walletBalance.subtract(amount));
-        boolean merchantUpdated = this.updateById(merchants);
-        if (!merchantUpdated) {
-            log.warn("withdraw方法: 提现失败，余额更新错误");
-            return R.error("提现失败");
-        }
-
-        // 提交异步处理提现请求
-        withdrawalRecordsService.processWithdrawAsync(withdrawalRecord);
-
-        log.info("withdraw方法: 提现申请成功，剩余余额: {}", merchants.getWalletBalance());
-        return R.success("提现申请成功，剩余余额: " + merchants.getWalletBalance());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public R<Page> getWithdrawApplications(int page, int pageSize, String token, String status) {
-        log.info("=======================getWithdrawApplications=========================");
-        log.info("getWithdrawApplications方法: page: {}, pageSize: {}, token: {}, status: {}", page, pageSize, token, status);
-
-        // 校验用户身份
-        try {
-            String userRole = jwtUtil.extractRole(token);
-            Long userId = jwtUtil.extractUserId(token);
-
-            log.info("getWithdrawApplications方法: userRole: {}, userId: {}", userRole, userId);
-            if (!UserRoles.MERCHANT.name().equals(userRole)) {
-                log.warn("getWithdrawApplications方法: 非法用户角色尝试获取提现申请");
-                return R.error("只有商家角色可以获取提现申请");
-            }
-
-            // 创建查询条件
-            LambdaQueryWrapper<WithdrawalRecords> queryWrapper = new LambdaQueryWrapper<>();
-            queryWrapper.eq(WithdrawalRecords::getMerchantId, userId)
-                    .eq(StringUtils.isNotEmpty(status), WithdrawalRecords::getStatus, status)
-                    .orderByDesc(WithdrawalRecords::getRequestTime); // 按申请时间倒序排列
-
-            // 执行分页查询
-            Page<WithdrawalRecords> pageInfo = new Page<>(page, pageSize);
-            pageInfo = withdrawalRecordsService.page(pageInfo, queryWrapper);
-
-            log.info("getWithdrawApplications方法: 查询成功，结果数量: {}", pageInfo.getRecords().size());
-            return R.success(pageInfo);
-        } catch (Exception e) {
-            log.error("getWithdrawApplications方法: 查询提现申请时发生错误", e);
-            return R.error("获取提现申请失败，请稍后重试");
-        }
-    }
 
 
 
