@@ -17,12 +17,6 @@ public interface MerchantService extends IService<Merchants> {
     //用户收货之后，待确认金额转入确认金额
     void modifyWalletBalance(Long merchantId, BigDecimal amount);
 
-    //待确认金额变更日志
-
-    void modifyPendingAmountLog(Long merchantId,BigDecimal amount,String description,String currency);
-
-    void modifyWalletBalanceLog(Long merchantId,Long orderId,BigDecimal amount,String description,String currency);
-
 
     //------------serviceLogic----------------
     R<Merchants> getMerchantByMerchantId(Long merchantId);
@@ -31,11 +25,4 @@ public interface MerchantService extends IService<Merchants> {
     R<String> deleteMerchant(String token);
 
 
-
-    //----------管理员方法---------
-    // 管理员分页查询用户申请成为商家的申请
-    R<Page> adminGetMerchantApplicationPage(int page, int pageSize, String status);
-
-    //管理员审核用户申请成为商家的申请是否通过审核
-    R<String> adminApproveMerchantApplication(Long merchantApplicationId,String status,String token);
 }

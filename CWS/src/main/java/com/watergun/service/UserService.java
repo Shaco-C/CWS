@@ -20,8 +20,6 @@ public interface UserService extends IService<Users> {
     R<String> updateUser(String token, Users user);
     //删除用户
     R<String> deleteUser(String token, Long userId);
-    //用户申请成为商家
-    R<String> merchantApplication(String token,MerchantApplication merchantApplication);
 
 
     //---------管理员方法---------

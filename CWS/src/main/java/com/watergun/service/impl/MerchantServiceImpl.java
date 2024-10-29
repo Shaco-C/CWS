@@ -1,7 +1,7 @@
 package com.watergun.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.CustomException;
@@ -28,24 +28,14 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
     private final JwtUtil jwtUtil;
     private final ProductService productService;
     private final UserService userService;
-    private final MerchantApplicationService merchantApplicationService;
-    private final PendingAmountLogService pendingAmountLogService;
-
-    private final WalletBalanceLogService walletBalanceLogService;
 
     // 使用构造函数注入依赖
 
     public MerchantServiceImpl(JwtUtil jwtUtil, ProductService productService,
-                               UserService userService,
-                               MerchantApplicationService merchantApplicationService,
-                               PendingAmountLogService pendingAmountLogService,
-                               WalletBalanceLogService walletBalanceLogService) {
+                               UserService userService) {
         this.jwtUtil = jwtUtil;
         this.productService = productService;
         this.userService = userService;
-        this.merchantApplicationService = merchantApplicationService;
-        this.pendingAmountLogService = pendingAmountLogService;
-        this.walletBalanceLogService = walletBalanceLogService;
     }
 
 
@@ -97,49 +87,6 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         log.info("modifyWalletBalance:商家{}的钱包余额修改成功", merchantId);
     }
 
-    //待确认金额变更日志
-    @Override
-    public void modifyPendingAmountLog(Long merchantId,  BigDecimal amount,String description,String currency) {
-        log.info("====================addPendingAmountLog====================");
-        log.info("addPendingAmountLog:商家{}增加待确认金额{}", merchantId, amount);
-        PendingAmountLog pendingAmountLog = new PendingAmountLog();
-        pendingAmountLog.setAmount(amount);
-        pendingAmountLog.setMerchantId(merchantId);
-        pendingAmountLog.setDescription(description);
-        pendingAmountLog.setCurrency(currency);
-
-        boolean result = pendingAmountLogService.save(pendingAmountLog);
-        if (!result){
-            throw new CustomException("添加待确认金额日志失败");
-        }
-        log.info("添加待确认金额日志成功");
-    }
-
-    //钱包余额变更日志
-    @Override
-    public void modifyWalletBalanceLog(Long merchantId, Long orderId, BigDecimal amount, String description, String currency) {
-        log.info("====================addWalletBalanceLog====================");
-        log.info("addWalletBalanceLog:商家{}钱包余额变动{}", merchantId, amount);
-        WalletBalanceLog walletBalanceLog = new WalletBalanceLog();
-
-        Merchants merchant = this.getById(merchantId);
-        if (merchant == null) {
-            throw new CustomException("商家不存在");
-        }
-        walletBalanceLog.setMerchantId(merchantId);
-        if (orderId!=null){
-            walletBalanceLog.setOrderId(orderId);
-        }
-        walletBalanceLog.setAmountChange(amount);
-        walletBalanceLog.setNewBalance(merchant.getWalletBalance());
-        walletBalanceLog.setDescription(description);
-        walletBalanceLog.setCurrency(currency);
-        boolean result = walletBalanceLogService.save(walletBalanceLog);
-        if (!result){
-            throw new CustomException("添加钱包余额日志失败");
-        }
-        log.info("添加钱包余额日志成功");
-    }
 
     //-----------------serviceLogic--------------
 
@@ -284,81 +231,4 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
 
         return R.success("商家删除成功");
     }
-
-
-
-
-
-    //----------管理员方法---------
-    // 管理员分页查询用户申请成为商家的申请
-    @Override
-    public R<Page> adminGetMerchantApplicationPage(int page, int pageSize, String status) {
-        log.info("=======================adminGetMerchantApplicationPage=========================");
-        log.info("Admin querying merchant applications - page: {}, pageSize: {}, status: {}", page, pageSize, status);
-
-        Page pageInfo = new Page(page,pageSize);
-        LambdaQueryWrapper<MerchantApplication> merchantApplicationsLambdaQueryWrapper = new LambdaQueryWrapper();
-        merchantApplicationsLambdaQueryWrapper.eq(io.micrometer.common.util.StringUtils.isNotEmpty(status), MerchantApplication::getStatus,status)
-                .orderByDesc(MerchantApplication::getUpdatedAt);
-
-        merchantApplicationService.page(pageInfo,merchantApplicationsLambdaQueryWrapper);
-        return R.success(pageInfo);
-    }
-
-    //管理员审核用户申请成为商家的申请是否通过审核(转移到MerchantApplication中)
-    @Override
-    @Transactional
-    public R<String> adminApproveMerchantApplication(Long merchantApplicationId,String status,String token){
-        log.info("=======================adminApproveMerchantApplication=========================");
-        log.info("merchantId: {}, status: {}", merchantApplicationId, status);
-        log.info("token: {}", token);
-
-        String userRole = jwtUtil.extractRole(token);
-        log.info("userRole: {}", userRole);
-        if (!UserRoles.ADMIN.name().equals(userRole)) {
-            return R.error("hello, you are not admin");
-        }
-
-        //获取申请详细信息
-        LambdaQueryWrapper<MerchantApplication> merchantApplicationLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        merchantApplicationLambdaQueryWrapper.eq(MerchantApplication::getApplicationId,merchantApplicationId);
-
-        //申请表详细信息
-        MerchantApplication merchantApplication = merchantApplicationService.getOne(merchantApplicationLambdaQueryWrapper);
-
-        if ("REJECTED".equals(status)){
-            merchantApplication.setStatus(MerchantApplicationsStatus.REJECTED);
-            merchantApplicationService.updateById(merchantApplication);
-            return R.success("用户成为商家申请被拒绝");
-        }
-
-        //从这开始之后就是申请通过的逻辑了
-        //更新申请表信息
-        merchantApplication.setStatus(MerchantApplicationsStatus.APPROVED);
-        merchantApplicationService.updateById(merchantApplication);
-
-        //将申请表信息注入商家表
-        Merchants merchants = new Merchants();
-        merchants.setMerchantId(merchantApplication.getUserId());
-        merchants.setShopName(merchantApplication.getShopName());
-        merchants.setAddress(merchantApplication.getAddress());
-        merchants.setCountry(merchantApplication.getCountry());
-
-        //以下的信息可以是空的值
-        merchants.setTaxId(merchantApplication.getTaxId());
-        merchants.setPaymentInfo(merchantApplication.getPaymentInfo());
-        merchants.setShopAvatarUrl(merchantApplication.getShopAvatarUrl());
-
-        this.save(merchants);
-
-        //同时也要更新用户表，将用户角色改为商家
-        Users users = new Users();
-        users.setRole(UserRoles.MERCHANT);
-        users.setUserId(merchantApplication.getUserId());
-        userService.updateById(users);
-
-        return R.success("用户成为商家申请通过");
-    }
-
-
 }

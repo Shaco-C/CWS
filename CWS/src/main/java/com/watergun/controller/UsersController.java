@@ -43,17 +43,6 @@ public class UsersController {
         return userService.deleteUser(token,userId);
     }
 
-
-    //用户申请成为商家
-    @PostMapping("/merchantApplication")
-    public R<String> merchantApplication(HttpServletRequest request, @RequestBody MerchantApplication merchantApplication){
-        log.info("用户申请成为商家:"+merchantApplication.toString());
-        String token = request.getHeader("Authorization").replace("Bearer ", "");
-
-        return userService.merchantApplication(token,merchantApplication);
-
-    }
-
     @PostMapping("/login")
     public R<String> login(HttpServletRequest request, @RequestBody Users user) {
         return userService.login(request,user);

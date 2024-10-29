@@ -14,6 +14,7 @@ import com.watergun.enums.WithdrawalRecordsStatus;
 import com.watergun.mapper.WithdrawalRecordsMapper;
 import com.watergun.service.BankAccountsService;
 import com.watergun.service.MerchantService;
+import com.watergun.service.WalletBalanceLogService;
 import com.watergun.service.WithdrawalRecordsService;
 import com.watergun.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -33,11 +34,16 @@ public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsM
 
     private final BankAccountsService bankAccountsService;
 
-    public WithdrawalRecordsServiceImpl(JwtUtil jwtUtil, MerchantService merchantService, BankAccountsService bankAccountsService) {
+    private final WalletBalanceLogService walletBalanceLogService;
+
+
+    public WithdrawalRecordsServiceImpl(JwtUtil jwtUtil, MerchantService merchantService, BankAccountsService bankAccountsService, WalletBalanceLogService walletBalanceLogService) {
         this.jwtUtil = jwtUtil;
         this.merchantService = merchantService;
         this.bankAccountsService = bankAccountsService;
+        this.walletBalanceLogService = walletBalanceLogService;
     }
+
     //================methods=================
     @Async // 异步执行
     @Override
@@ -50,7 +56,7 @@ public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsM
             Thread.sleep(5000); // 模拟银行接口延迟
 
             // 模拟银行返回的处理结果
-            boolean bankSuccess = false;
+            boolean bankSuccess = true;
 
             // 更新提现记录状态
             if (bankSuccess) {
@@ -68,7 +74,7 @@ public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsM
                     throw new CustomException("提现失败，将钱退回商家钱包失败");
                 }
                 log.info("提现失败，将钱退回商家钱包: 商家ID: {}, 金额: {}", merchants.getMerchantId(), withdrawalRecord.getAmount());
-                merchantService.modifyWalletBalanceLog(merchants.getMerchantId(),null,withdrawalRecord.getAmount(),
+                walletBalanceLogService.modifyWalletBalanceLog(merchants.getMerchantId(),null,withdrawalRecord.getAmount(),
                         "提现失败，将钱退回商家钱包", withdrawalRecord.getCurrency());
             }
 
@@ -153,7 +159,7 @@ public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsM
         }
 
         //添加确认金额变更日志
-        merchantService.modifyWalletBalanceLog(userId,null, amount.negate(),
+        walletBalanceLogService.modifyWalletBalanceLog(userId,null, amount.negate(),
                 "提现到银行"+bankAccount.getBankName()+"账户为:"+bankAccount.getAccountNumber(),"CNY");
 
         // 提交异步处理提现请求

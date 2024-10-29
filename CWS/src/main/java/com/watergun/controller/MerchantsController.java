@@ -53,21 +53,5 @@ public class MerchantsController {
 
     //处理退货请求
 
-    //----------管理员方法---------
-    // 管理员分页查询用户申请成为商家的申请
-    @GetMapping("/admin/getMerchantApplicationPage")
-    public R<Page> adminGetMerchantApplicationPage(@RequestParam(value = "page", defaultValue = "1") int page,
-                                            @RequestParam(value = "pageSize", defaultValue = "1") int pageSize,
-                                            String status) {
-        return merchantService.adminGetMerchantApplicationPage(page, pageSize, status);
-    }
 
-    //管理员审核用户申请成为商家的申请是否通过审核
-    @Transactional
-    @PutMapping("/admin/approveMerchantApplicationStatus/{merchantApplicationId}")
-    public R<String> adminApproveMerchantApplication(@PathVariable Long merchantApplicationId,@RequestParam String status,HttpServletRequest request){
-        // 从请求头中获取 JWT
-        String token = request.getHeader("Authorization").replace("Bearer ", "");
-        return merchantService.adminApproveMerchantApplication(merchantApplicationId,status,token);
-    }
 }

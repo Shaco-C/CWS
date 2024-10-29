@@ -37,15 +37,19 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
 
     private final PayLogicUtil payLogicUtil;
 
-    public OrderServiceImpl(JwtUtil jwtUtil, OrderItemsService orderItemsService, ProductService productService,
-                            MerchantService merchantService, UserAddressService userAddressService,
-                            PayLogicUtil payLogicUtil) {
+    private final WalletBalanceLogService walletBalanceLogService;
+
+    private final PendingAmountLogService pendingAmountLogService;
+
+    public OrderServiceImpl(JwtUtil jwtUtil, OrderItemsService orderItemsService, ProductService productService, MerchantService merchantService, UserAddressService userAddressService, PayLogicUtil payLogicUtil, WalletBalanceLogService walletBalanceLogService, PendingAmountLogService pendingAmountLogService) {
         this.jwtUtil = jwtUtil;
         this.orderItemsService = orderItemsService;
         this.productService = productService;
         this.merchantService = merchantService;
         this.userAddressService = userAddressService;
         this.payLogicUtil = payLogicUtil;
+        this.walletBalanceLogService = walletBalanceLogService;
+        this.pendingAmountLogService = pendingAmountLogService;
     }
 
     //-------------method--------------
@@ -353,7 +357,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             log.info("payOrders:商家 {} 的待处理金额增加: {}", merchantId, amountToAdd);
 
             merchantService.modifyPendingAmount(merchantId, amountToAdd); // 更新商家的待处理金额
-            merchantService.modifyPendingAmountLog(merchantId,amountToAdd,"用户支付订单增加待处理金额","USD");
+            pendingAmountLogService.modifyPendingAmountLog(merchantId,amountToAdd,"用户支付订单增加待处理金额","USD");
 
         }
         log.info("用户 ID: {} 的订单支付成功，订单 IDs: {},订单总金额为:{}", userId, orderIds, totalAmount);
@@ -502,11 +506,11 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         merchantService.modifyWalletBalance(orders.getMerchantId(),orders.getTotalAmount());
 
         //添加待确认余额变更日志
-        merchantService.modifyPendingAmountLog(orders.getMerchantId(), orders.getTotalAmount().negate(),
+        pendingAmountLogService.modifyPendingAmountLog(orders.getMerchantId(), orders.getTotalAmount().negate(),
                 "用户确认收货，待确认金额转入确认金额", orders.getCurrency());
 
         //添加确认金额变更日志
-        merchantService.modifyWalletBalanceLog(orders.getMerchantId(),orderId, orders.getTotalAmount(),
+        walletBalanceLogService.modifyWalletBalanceLog(orders.getMerchantId(),orderId, orders.getTotalAmount(),
                 "用户确认收货，确认金额增加", orders.getCurrency());
         log.info("订单 {} 已成功收货，商家待确认金额已添加到确认金额中", orderId);
         return R.success("Order received successfully");

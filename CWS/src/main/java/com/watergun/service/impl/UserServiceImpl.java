@@ -28,11 +28,9 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
 
     private final JwtUtil jwtUtil;
 
-    private final MerchantApplicationService merchantApplicationService;
 
-    public UserServiceImpl(JwtUtil jwtUtil, MerchantApplicationService merchantApplicationService) {
+    public UserServiceImpl(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
-        this.merchantApplicationService = merchantApplicationService;
     }
 
     @Override
@@ -137,25 +135,6 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         log.info("删除用户:{}",userId);
         this.removeById(userId);
         return R.success("删除用户成功");
-    }
-
-    //用户申请成为商家
-    @Override
-    @Transactional
-    public R<String> merchantApplication(String token, MerchantApplication merchantApplication) {
-        log.info("====================merchantApplication==============================");
-        log.info("调用商家申请请求");
-        log.info("token: {}", token);
-        log.info("merchantApplication: {}", merchantApplication);
-        Long userId = jwtUtil.extractUserId(token);
-        String userRole =jwtUtil.extractRole(token);
-        if (!UserRoles.USER.name().equals(userRole)){
-            return R.error("管理员或商家不能够申请成为商家");
-        }
-        merchantApplication.setStatus(MerchantApplicationsStatus.PENDING);
-        merchantApplication.setUserId(userId);
-        merchantApplicationService.save(merchantApplication);
-        return R.success("申请成功");
     }
 
 
