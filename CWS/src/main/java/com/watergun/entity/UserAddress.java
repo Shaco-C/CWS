@@ -20,6 +20,7 @@ public class UserAddress {
     private Long userId; // 用户ID，外键关联用户表
 
     private String recipientName; // 收件人姓名
+    private String phoneCode; // 区号
 
     private String phoneNumber; // 联系电话
 
