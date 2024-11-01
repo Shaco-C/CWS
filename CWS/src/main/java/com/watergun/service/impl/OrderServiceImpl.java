@@ -374,6 +374,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         return R.success("Orders paid successfully");
     }
 
+    //用户取消订单
     @Override
     public R<String> cancelOrder(String token, Long orderId) {
         log.info("======================cancelOrder======================");
@@ -405,7 +406,38 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         }
         log.info("订单 {} 已成功取消", orderId);
 
+        // 对订单涉及到的 product 进行库存恢复
+        // 获取涉及到的 OrderItems
+        LambdaQueryWrapper<OrderItems> orderItemsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        orderItemsLambdaQueryWrapper.eq(OrderItems::getOrderId, orderId);
+        List<OrderItems> orderItemsList = orderItemsService.list(orderItemsLambdaQueryWrapper);
+
+        // 获取所有 productId 并批量查询产品信息
+        List<Long> productIds = orderItemsList.stream()
+                .map(OrderItems::getProductId)
+                .collect(Collectors.toList());
+        List<Products> productsList = productService.getProductsByIds(productIds);
+
+        // 将 Products 转换为 Map，方便通过 productId 快速查找对应产品
+        Map<Long, Products> productsMap = productsList.stream()
+                .collect(Collectors.toMap(Products::getProductId, product -> product));
+
+        // 逐一更新库存和销量
+        for (OrderItems orderItems : orderItemsList) {
+            Products product = productsMap.get(orderItems.getProductId());
+            if (product != null) {
+                // 增加库存
+                product.setStock(product.getStock() + orderItems.getQuantity());
+                // 减少销量
+                product.setSales(product.getSales() - orderItems.getQuantity());
+            }
+        }
+
+        // 批量更新产品信息
+        productService.updateBatchById(productsList);
+
         // 对待处理状态的订单进行额外处理
+        // 减少商家的待确认金额
         if (OrderStatus.PENDING.equals(order.getStatus())) {
             Merchants merchants = merchantService.getById(order.getMerchantId());
             if (merchants == null) {

@@ -2,13 +2,11 @@ package com.watergun.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.dto.ShopDTO;
 import com.watergun.entity.*;
-import com.watergun.enums.MerchantApplicationsStatus;
 import com.watergun.enums.UserRoles;
 import com.watergun.mapper.MerchantsMapper;
 import com.watergun.service.*;
@@ -189,7 +187,7 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
         String userRole = jwtUtil.getUserRoleFromToken(token);
 
         // 检查商家是否存在商品
-        Long cnt = productService.count(new LambdaQueryWrapper<Products>().eq(Products::getMerchantId, merchantId).last("LIMIT 1"));
+        long cnt = productService.count(new LambdaQueryWrapper<Products>().eq(Products::getMerchantId, merchantId).last("LIMIT 1"));
         if (cnt > 0) {
             log.warn("商家下还有产品，无法删除");
             return R.error("商家下还有产品，无法删除");

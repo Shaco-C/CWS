@@ -131,15 +131,15 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
                     .findFirst()
                     .orElse(null);
 
+            ProductDTO productDTO;
             if (product == null || !product.getIsActive()) {
                 // 商品已下架或删除，添加相应提示
-                ProductDTO productDTO = new ProductDTO();
+                productDTO = new ProductDTO();
                 productDTO.setProductId(cartItem.getProductId());
                 productDTO.setMessage("商品已下架或已删除");
-                productDTOList.add(productDTO);
             } else {
                 // 正常商品
-                ProductDTO productDTO = new ProductDTO(product);
+                productDTO = new ProductDTO(product);
                 productDTO.setQuantity(productQuantityMap.get(product.getProductId()));
 
                 // 设置商家信息
@@ -149,8 +149,9 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
                     productDTO.setShopName(merchants.getShopName());
                     productDTO.setShopAvatarUrl(merchants.getShopAvatarUrl());
                 }
-                productDTOList.add(productDTO);
             }
+            productDTOList.add(productDTO);
+
         }
 
         return R.success(productDTOList);

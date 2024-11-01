@@ -2,7 +2,6 @@ package com.watergun.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.CustomException;
-import com.watergun.entity.Merchants;
 import com.watergun.entity.PendingAmountLog;
 import com.watergun.mapper.PendingAmountLogMapper;
 import com.watergun.service.PendingAmountLogService;
