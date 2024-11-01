@@ -94,8 +94,8 @@ public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsM
         log.info("withdraw方法: token: {}, amount: {}, bankAccountId: {}", token, amount, bankAccountId);
 
         // 校验用户身份
-        String userRole = jwtUtil.extractRole(token);
-        Long userId = jwtUtil.extractUserId(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
         if (!UserRoles.MERCHANT.name().equals(userRole)) {
             log.warn("withdraw方法: 非法用户角色尝试提现");
             return R.error("只有商家角色可以进行提现操作");
@@ -178,8 +178,8 @@ public class WithdrawalRecordsServiceImpl extends ServiceImpl<WithdrawalRecordsM
 
         // 校验用户身份
         try {
-            String userRole = jwtUtil.extractRole(token);
-            Long userId = jwtUtil.extractUserId(token);
+            String userRole = jwtUtil.getUserRoleFromToken(token);
+            Long userId = jwtUtil.getUserIdFromToken(token);
 
             log.info("getWithdrawApplications方法: userRole: {}, userId: {}", userRole, userId);
             if (!UserRoles.MERCHANT.name().equals(userRole)) {

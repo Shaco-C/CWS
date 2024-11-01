@@ -51,8 +51,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
         log.info("===============================addCategories==================================");
         log.info("token: {}", token);
         log.info("categories: {}", categories);
-        String userRole = jwtUtil.extractRole(token);
-        Long userId =jwtUtil.extractUserId(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+        Long userId =jwtUtil.getUserIdFromToken(token);
         if (!userRole.equals(UserRoles.ADMIN.name())) {
             log.warn("user {} is trying to add Catrgory",userId);
             return R.error("权限不足");
@@ -70,8 +70,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
         log.info("===============================updateCategories==================================");
         log.info("token: {}", token);
         log.info("categories: {}", categories);
-        String userRole = jwtUtil.extractRole(token);
-        Long userId =jwtUtil.extractUserId(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+        Long userId =jwtUtil.getUserIdFromToken(token);
         if (!userRole.equals(UserRoles.ADMIN.name())) {
             log.warn("user {} is trying to update Catrgory",userId);
             return R.error("权限不足");
@@ -90,8 +90,8 @@ public class CategoryServiceImpl extends ServiceImpl<CategoriesMapper, Categorie
         log.info("Token: {}", token);
 
         // 提取用户角色和ID
-        String userRole = jwtUtil.extractRole(token);
-        Long userId = jwtUtil.extractUserId(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 检查是否为管理员
         if (!UserRoles.ADMIN.name().equals(userRole)) {

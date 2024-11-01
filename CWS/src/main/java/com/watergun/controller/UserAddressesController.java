@@ -5,7 +5,6 @@ import com.watergun.common.R;
 import com.watergun.entity.UserAddress;
 import com.watergun.service.UserAddressService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

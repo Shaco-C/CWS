@@ -115,14 +115,14 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
             return R.error("无效的token");
         }
 
-        Long merchantId = jwtUtil.extractUserId(token);
-        String userRole = jwtUtil.extractRole(token);
+        Long merchantId = jwtUtil.getUserIdFromToken(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
         log.info("商家ID: {}", merchantId);
         log.info("userRole: {}", userRole);
         // 如果是管理员，可以修改任何商家信息
         if (UserRoles.ADMIN.name().equals(userRole)) {
             log.info("管理员{}正在修改商家信息", merchantId);
-        } else if (merchantId == null || !merchantId.equals(merchants.getMerchantId())) {
+        } else if ( !merchantId.equals(merchants.getMerchantId())) {
             // 如果是商家本人，必须匹配商家ID
             log.warn("商家{}尝试修改无权限的商家{}信息", merchantId, merchants.getMerchantId());
             return R.error("权限不足");
@@ -185,8 +185,8 @@ public class MerchantServiceImpl extends ServiceImpl<MerchantsMapper, Merchants>
             return R.error("token 已过期");
         }
 
-        Long merchantId = jwtUtil.extractUserId(token);
-        String userRole = jwtUtil.extractRole(token);
+        Long merchantId = jwtUtil.getUserIdFromToken(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
 
         // 检查商家是否存在商品
         Long cnt = productService.count(new LambdaQueryWrapper<Products>().eq(Products::getMerchantId, merchantId).last("LIMIT 1"));

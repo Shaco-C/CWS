@@ -88,8 +88,8 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         log.info("token: {}", token);
         log.info("review: {}", review);
 
-        Long userId = jwtUtil.extractUserId(token);
-        log.info("userId: {}", userId);
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
 
         review.setStatus(ReviewsStatus.PENDING);
         review.setUserId(userId);
@@ -111,8 +111,8 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         log.info("token: {}", token);
         log.info("reviewDetails: {}", reviewDetails);
 
-        Long userId = jwtUtil.extractUserId(token);
-        log.info("userId: {}", userId);
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
         //根据ID获取评论详情。如果评论不存在，则返回错误信息
         Reviews review = this.getById(reviewId);
         log.info("review: {}", review);
@@ -144,10 +144,9 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         log.info("reviewId: {}", reviewId);
         log.info("token: {}", token);
 
-        Long userId = jwtUtil.extractUserId(token);
-        log.info("userId: {}", userId);
-        String userRole = jwtUtil.extractRole(token);
-        log.info("userRole: {}", userRole);
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
+        String userRole = jwtUtil.getUserRoleFromToken(token);;
 
         //根据ID获取评论详情。如果评论不存在，则返回错误信息
         Reviews review = this.getById(reviewId);
@@ -171,8 +170,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         log.info("pageSize: {}", pageSize);
         log.info("token: {}", token);
 
-        Long userId = jwtUtil.extractUserId(token);
-        log.info("userId: {}", userId);
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         LambdaQueryWrapper<Reviews> reviewsLambdaQueryWrapper = new LambdaQueryWrapper<>();
         reviewsLambdaQueryWrapper.eq(Reviews::getUserId, userId)
@@ -205,8 +203,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewsMapper, Reviews> imple
         log.info("=====================reviewStatus=========================");
         log.info("token: {}", token);
         // 提取 JWT 中的用户角色
-        String userRole = jwtUtil.extractRole(token);
-        log.info("userRole: {}", userRole);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
 
         // 检查用户是否是管理员
         if (!UserRoles.ADMIN.name().equals(userRole)) {

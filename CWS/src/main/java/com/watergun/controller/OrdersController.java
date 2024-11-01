@@ -58,7 +58,12 @@ public class OrdersController {
         return orderService.receivedProduct(token,orderId);
     }
     //用户取消订单
+    @PutMapping("/cancelOrder")
+    public R<String> cancelOrder(HttpServletRequest request,@RequestParam Long orderId){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.cancelOrder(token,orderId);
 
+    }
     //查看历史订单
 
     //查看订单详情
@@ -66,6 +71,8 @@ public class OrdersController {
     //取消订单
 
     //用户申请退货
+
+    //商家处理退货
 
     //--------------商家方法---------------
     //商家查看自己订单

@@ -14,7 +14,6 @@ import com.watergun.service.MerchantApplicationService;
 import com.watergun.service.MerchantService;
 import com.watergun.service.UserService;
 import com.watergun.utils.JwtUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,8 +42,8 @@ public class MerchantApplicationServiceImpl extends ServiceImpl<MerchantApplicat
         log.info("调用商家申请请求");
         log.info("token: {}", token);
         log.info("merchantApplication: {}", merchantApplication);
-        Long userId = jwtUtil.extractUserId(token);
-        String userRole =jwtUtil.extractRole(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        String userRole =jwtUtil.getUserRoleFromToken(token);
         if (!UserRoles.USER.name().equals(userRole)){
             return R.error("管理员或商家不能够申请成为商家");
         }
@@ -78,7 +77,7 @@ public class MerchantApplicationServiceImpl extends ServiceImpl<MerchantApplicat
         log.info("merchantId: {}, status: {}", merchantApplicationId, status);
         log.info("token: {}", token);
 
-        String userRole = jwtUtil.extractRole(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
         log.info("userRole: {}", userRole);
         if (!UserRoles.ADMIN.name().equals(userRole)) {
             return R.error("hello, you are not admin");

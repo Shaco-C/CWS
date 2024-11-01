@@ -41,9 +41,9 @@ public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites
         log.info("============================调用addToFavorites方法========================");
         log.info("addToFavorites: token={}, productId={}", token, productId);
 
-        Long userId =jwtUtil.extractUserId(token);
+        Long userId =jwtUtil.getUserIdFromToken(token);
         log.info("addToFavorites: userId={}", userId);
-        if (userId == null || productId==null) {
+        if ( productId==null) {
             return R.error("添加收藏失败,系统错误");
         }
         LambdaQueryWrapper<Favorites> favoritesLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -69,7 +69,7 @@ public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites
         if( token == null || productId == null) {
             return R.error("移除收藏失败,系统错误");
         }
-        Long userId =jwtUtil.extractUserId(token);
+        Long userId =jwtUtil.getUserIdFromToken(token);
         log.info("removeFavorites: userId={}", userId);
         LambdaQueryWrapper<Favorites> favoritesLambdaQueryWrapper = new LambdaQueryWrapper<>();
         favoritesLambdaQueryWrapper.eq(Favorites::getUserId, userId);
@@ -93,12 +93,8 @@ public class FavoritesServiceImpl extends ServiceImpl<FavoritesMapper, Favorites
             return R.error("获取收藏列表失败, 系统错误");
         }
 
-        Long userId = jwtUtil.extractUserId(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
         log.info("getFavorites: userId={}", userId);
-
-        if (userId == null) {
-            return R.error("用户未登录");
-        }
 
         // 获取用户的收藏列表
         LambdaQueryWrapper<Favorites> favoritesLambdaQueryWrapper = new LambdaQueryWrapper<>();

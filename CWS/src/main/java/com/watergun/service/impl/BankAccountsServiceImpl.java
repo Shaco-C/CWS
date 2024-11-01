@@ -41,13 +41,8 @@ public class BankAccountsServiceImpl extends ServiceImpl<BankAccountsMapper, Ban
             }
 
             // 从 Token 中解析出用户ID
-            Long userId = jwtUtil.extractUserId(token);
+            Long userId = jwtUtil.getUserIdFromToken(token);
             log.info("getAllBankAccounts方法: userId: {}", userId);
-
-            if (userId == null) {
-                log.warn("getAllBankAccounts方法: 无法解析到用户ID，token可能无效");
-                return R.error("用户不存在或Token无效");
-            }
 
             // 查询用户的银行账户
             LambdaQueryWrapper<BankAccounts> queryWrapper = new LambdaQueryWrapper<>();
@@ -85,11 +80,7 @@ public class BankAccountsServiceImpl extends ServiceImpl<BankAccountsMapper, Ban
                 return R.error("Token已过期，请重新登录");
             }
 
-            Long userId = jwtUtil.extractUserId(token);
-            if (userId == null) {
-                log.warn("addBankAccount方法: 无法解析到用户ID，token可能无效");
-                return R.error("用户不存在或Token无效");
-            }
+            Long userId = jwtUtil.getUserIdFromToken(token);
 
             // 3. 检查关键字段是否为空
             if (StringUtils.isEmpty(bankAccounts.getAccountHolderName()) ||
@@ -154,11 +145,7 @@ public class BankAccountsServiceImpl extends ServiceImpl<BankAccountsMapper, Ban
             }
 
             // 从 token 中获取用户 ID
-            Long userId = jwtUtil.extractUserId(token);
-            if (userId == null) {
-                log.warn("deleteBankAccount方法: 无法解析到用户ID，token可能无效");
-                return R.error("用户不存在或Token无效");
-            }
+            Long userId = jwtUtil.getUserIdFromToken(token);
 
             // 根据 bankAccountId 查找对应的银行账户
             BankAccounts bankAccount = this.getById(bankAccountId);

@@ -101,9 +101,10 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         log.info("调用更新用户请求");
         log.info("user: {}", user);
         log.info("token: {}", token);
-        Long userId = jwtUtil.extractUserId(token);
-        log.info("userId: {}", userId);
-        String userRole = jwtUtil.extractRole(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+
         if (!userId.equals(user.getUserId())&&!UserRoles.ADMIN.name().equals(userRole)){
             log.warn("用户ID {} 尝试修改非本人信息，当前角色: {}", userId, userRole);
             return R.error("无权限");
@@ -127,8 +128,8 @@ public class UserServiceImpl extends ServiceImpl<UsersMapper, Users> implements 
         log.info("调用删除用户请求");
         log.info("token: {}", token);
         log.info("userId: {}", userId);
-        Long userIdNow = jwtUtil.extractUserId(token);
-        String userRole =jwtUtil.extractRole(token);
+        Long userIdNow = jwtUtil.getUserIdFromToken(token);
+        String userRole =jwtUtil.getUserRoleFromToken(token);
         if (!userRole.equals(UserRoles.ADMIN.name())&&!userIdNow.equals(userId)){
             return R.error("无权限");
         }

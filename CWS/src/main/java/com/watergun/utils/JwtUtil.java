@@ -3,6 +3,7 @@ package com.watergun.utils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +13,7 @@ import java.util.Map;
 
 
 @Component
+@Slf4j
 public class JwtUtil {
     @Value("${jwt.secret}")
     private String SECRET_KEY;
@@ -56,4 +58,37 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
     }
+
+    /**
+     * 验证userId是否为空
+     * @param token 用户token
+     * @return userId 用户id
+     * @author CJ
+     */
+    public Long getUserIdFromToken(String token) {
+        Long userId = this.extractUserId(token);
+        log.info("userId: {}", userId);
+        if (userId == null) {
+            log.warn("用户未登录");
+            throw new IllegalStateException("user not login");
+        }
+        return userId;
+    }
+
+    /**
+     * 获取用户角色
+     * @param token 用户token
+     * @return userRole 用户角色
+     * @author CJ
+     */
+    public String getUserRoleFromToken(String token) {
+        String userRole = this.extractRole(token);
+        log.info("userId: {}", userRole);
+        if (userRole == null) {
+            log.warn("用户未登录");
+            throw new IllegalStateException("user not login");
+        }
+        return userRole;
+    }
+
 }

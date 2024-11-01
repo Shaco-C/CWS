@@ -53,6 +53,14 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
     }
 
     //-------------method--------------
+    /**
+     * 用户一次性购买多个商家的物品时，会生成多个订单，在这里统一验证
+     * @param orderIds 订单id列表
+     * @param userId 用户id
+     * @return 属于用户的订单列表
+     * @author CJ
+     */
+    
     @Override
     public List<Orders> getOrdersByIdsAndUserId(List<Long> orderIds, Long userId) {
         log.info("========================getOrdersByIdsAndUserId 被调用====================");
@@ -72,6 +80,13 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         return this.list(queryWrapper);
     }
 
+    /**
+     * 判断订单是否属于商家
+     * @param order 订单
+     * @param merchantId 商家id
+     * @return boolean
+     * @author CJ
+     */
     @Override
     public boolean isOrderBelongsToMerchant(Orders order, Long merchantId) {
         log.info("========================isOrderBelongsToMerchant 被调用====================");
@@ -80,7 +95,10 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
 
 
 
+
     //-------------serviceLogic-----------
+
+    //商家查看属于自己的订单
     @Override
     public R<Page> merchantsGetOrders(int page, int pageSize, String token, String status, String returnStatus) {
         log.info("========================merchantsGetOrders 被调用====================");
@@ -93,8 +111,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             return R.error("token 已过期");
         }
 
-        Long merchantId = jwtUtil.extractUserId(token);
-        String userRole = jwtUtil.extractRole(token);
+        Long merchantId = jwtUtil.getUserIdFromToken(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
 
         // 确认用户角色是否为商家
         log.info("商家ID: {}, 用户角色: {}", merchantId, userRole);
@@ -162,11 +180,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         log.info("Creating order: token={}, productIds={}, quantities={}, addressId={}", token, productIds, quantities, addressId);
 
         // 从 token 中提取用户 ID
-        Long userId = jwtUtil.extractUserId(token);
-        if (userId == null) {
-            log.error("无效的 token，无法提取用户 ID");
-            return R.error("Invalid token");
-        }
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 检查地址是否属于用户
         UserAddress address = userAddressService.getById(addressId);
@@ -285,12 +299,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
     public R<String> payOrders(String token, List<Long> orderIds, String paymentMethod) {
         log.info("=================调用 payOrders 方法=================");
         // 从 token 中提取用户 ID
-        Long userId = jwtUtil.extractUserId(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
         log.info("payOrders: User ID extracted from token: {}", userId);
-        if (userId == null) {
-            log.error("无效的 token，无法提取用户 ID");
-            return R.error("Invalid token");
-        }
 
         // 检查 orderIds 是否为空
         if (orderIds == null || orderIds.isEmpty()) {
@@ -364,6 +374,55 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         return R.success("Orders paid successfully");
     }
 
+    @Override
+    public R<String> cancelOrder(String token, Long orderId) {
+        log.info("======================cancelOrder======================");
+        log.info("用户 {} 请求取消订单，订单 ID: {}", token, orderId);
+
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
+        Orders order = this.getById(orderId);
+        if (order == null) {
+            log.error("订单 {} 不存在", orderId);
+            return R.error("Order does not exist");
+        }
+
+        if (!userId.equals(order.getUserId())) {
+            log.error("用户 {} 无权取消订单 {}", userId, orderId);
+            return R.error("Unauthorized access");
+        }
+
+        if (!OrderStatus.PENDING.equals(order.getStatus()) && !OrderStatus.PENDING_PAYMENT.equals(order.getStatus())) {
+            log.warn("订单 {} 的状态不能被取消", orderId);
+            return R.error("Order cannot be cancelled due to its current status");
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        boolean result = this.updateById(order);
+        if (!result) {
+            log.error("订单 {} 取消失败", orderId);
+            return R.error("Order cancellation failed");
+        }
+        log.info("订单 {} 已成功取消", orderId);
+
+        // 对待处理状态的订单进行额外处理
+        if (OrderStatus.PENDING.equals(order.getStatus())) {
+            Merchants merchants = merchantService.getById(order.getMerchantId());
+            if (merchants == null) {
+                log.error("商家 ID {} 不存在", order.getMerchantId());
+                return R.error("Merchant does not exist");
+            }
+
+            BigDecimal amountToSubtract = order.getTotalAmount();
+            log.info("商家 {} 的待处理金额减少: {}", merchants.getMerchantId(), amountToSubtract);
+            merchantService.modifyPendingAmount(merchants.getMerchantId(), amountToSubtract.negate());
+            pendingAmountLogService.modifyPendingAmountLog(merchants.getMerchantId(), amountToSubtract.negate(), "用户取消订单减少待处理金额", "USD");
+        }
+
+        return R.success("Order cancelled successfully");
+    }
+
+
     //商家发货
     @Override
     @Transactional
@@ -371,11 +430,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         log.info("======================merchantsShipppedProduct======================");
         log.info("商家 {} 请求发货，订单 ID: {}", token, orderId);
 
-        Long merchantId = jwtUtil.extractUserId(token);
-        if (merchantId == null) {
-            log.error("无效的商家ID");
-            return R.error("Invalid merchant ID");
-        }
+        Long merchantId = jwtUtil.getUserIdFromToken(token);
 
         Orders order = this.getById(orderId);
         if (order == null) {
@@ -472,11 +527,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
     public R<String> receivedProduct(String token, Long orderId) {
         log.info("======================receivedProduct======================");
         log.info("请求物流，订单 ID: {}", orderId);
-        Long userId = jwtUtil.extractUserId(token);
-        if (userId == null) {
-            log.info("用户信息异常");
-            return R.error("User not logged in");
-        }
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
         Orders orders = this.getById(orderId);
         if (orders == null) {
             log.info("订单 {} 不存在", orderId);

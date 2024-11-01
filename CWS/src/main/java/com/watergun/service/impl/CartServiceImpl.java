@@ -84,11 +84,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         }
         log.info("getCartList: token = {}", token);
 
-        Long userId = jwtUtil.extractUserId(token);
-        if (userId == null) {
-            log.warn("userId is null");
-            return R.error("userId is null");
-        }
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 获取用户购物车信息
         LambdaQueryWrapper<Cart> cartLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -182,11 +178,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
             return R.error("Quantity is required");
         }
 
-        Long userId = jwtUtil.extractUserId(token);
-        if (userId == null) {
-            log.error("addProductToCartItem:用户不存在");
-            return R.error("用户不存在");
-        }
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 检查商品是否下架
         Products product = productService.getById(cartItems.getProductId());
@@ -246,11 +238,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
         }
 
         // 通过token获取用户ID
-        Long userId = jwtUtil.extractUserId(token);
-        if (userId == null) {
-            log.error("deleteProductFromCartItem:用户不存在");
-            return R.error("用户不存在");
-        }
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 验证购物车详情项是否存在，并且属于该用户的购物车
         CartItems cartItem = cartItemService.getById(cartItemId);

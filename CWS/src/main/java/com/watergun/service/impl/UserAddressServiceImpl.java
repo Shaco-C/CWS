@@ -34,23 +34,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
     public UserAddressServiceImpl(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
     }
-
-    /**
-     * 根据Token获取用户ID
-     *
-     * @param token 用户的JWT Token
-     * @return 用户ID
-     * @throws IllegalStateException 如果用户未登录或Token无效，将抛出异常
-     */
-    private Long getUserIdFromToken(String token) {
-        Long userId = jwtUtil.extractUserId(token);
-        log.info("userId: {}", userId);
-        if (userId == null) {
-            log.warn("用户未登录");
-            throw new IllegalStateException("user not login");
-        }
-        return userId;
-    }
+    //----methods
 
     /**
      * 检查用户ID是否与地址的用户ID匹配
@@ -67,7 +51,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
         log.info("用户id匹配");
         return true;
     }
-
+//========serviceLogic===
     /**
      * 添加新地址
      *
@@ -79,8 +63,8 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
     public R<String> addAddress(String token, UserAddress userAddress) {
         log.info("============addAddress==============");
         log.info("Entering addAddress with token: {}, userAddress: {}", token, userAddress);
-        Long userId = getUserIdFromToken(token);
-        log.info("userId: {}", userId);
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
         // 验证用户ID是否匹配
         if (!isUserAuthorized(userId, userAddress.getUserId())) {
             log.warn("user id not match");
@@ -108,8 +92,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
     public R<String> updateAddress(String token, UserAddress userAddress) {
         log.info("================updateAddress====================");
         log.info("Entering updateAddress with token: {}, userAddress: {}", token, userAddress);
-        Long userId = getUserIdFromToken(token);
-        log.info("userId: {}", userId);
+        Long userId = jwtUtil.getUserIdFromToken(token);
         // 验证用户ID是否匹配
         if (!isUserAuthorized(userId, userAddress.getUserId())) {
             log.warn("user id not match");
@@ -138,8 +121,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
     public R<String> deleteAddress(String token, Long addressId) {
         log.info("================deleteAddress====================");
         log.info("Entering deleteAddress with token: {}, addressId: {}", token, addressId);
-        Long userId = getUserIdFromToken(token);
-        log.info("userId: {}", userId);
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 检查地址是否存在并且属于当前用户
         UserAddress address = this.getById(addressId);
@@ -169,8 +151,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
     public R<String> setDefaultAddress(String token, Long id) {
         log.info("================setDefaultAddress====================");
         log.info("Entering setDefaultAddress with token: {}, id: {}", token, id);
-        Long userId = getUserIdFromToken(token);
-        log.info("userId: {}", userId);
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 先将用户的所有地址的isDefault字段设置为false
         LambdaQueryWrapper<UserAddress> resetWrapper = new LambdaQueryWrapper<>();
@@ -215,7 +196,7 @@ public class UserAddressServiceImpl extends ServiceImpl<UserAddressMapper, UserA
             return R.error("Invalid token");
         }
 
-        Long userId = getUserIdFromToken(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
 
         // 查询用户的所有地址
         LambdaQueryWrapper<UserAddress> userAddressLambdaQueryWrapper = new LambdaQueryWrapper<>();

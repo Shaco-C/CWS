@@ -23,6 +23,10 @@ public interface OrderService extends IService<Orders> {
 
     //用户支付订单
     R<String> payOrders(String token,List<Long> orderIds, String paymentMethod);
+
+    //用户取消订单
+    R<String> cancelOrder(String token,Long orderId);
+
     //商家发货
     R<String> merchantsShipppedProduct(String token,Long orderId);
     //模拟快递员送货方法

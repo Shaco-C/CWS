@@ -50,11 +50,9 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
       log.info("token: {}", token);
       log.info("products: {}", products);
 
-      Long userId = jwtUtil.extractUserId(token);
-      log.info("userId: {}", userId);
+      Long userId = jwtUtil.getUserIdFromToken(token);;
 
-      String userRole = jwtUtil.extractRole(token);
-      log.info("userRole: {}", userRole);
+      String userRole = jwtUtil.getUserRoleFromToken(token);
 
       if (!userRole.equals(UserRoles.MERCHANT.name())) {
         return R.error("You are not authorized to create a product");
@@ -134,9 +132,9 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     public R<String> deleteProduct(String token, Long productId) {
         log.info("==========================deleteProduct method is called=========================");
         log.info("token: {}, productId: {}", token, productId);
-        Long userId = jwtUtil.extractUserId(token);
-        String userRole = jwtUtil.extractRole(token);
-        if (userId == null || token == null || productId == null) {
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+        if (productId == null) {
             return R.error("Invalid request");
         }
         if (!userRole.equals(UserRoles.MERCHANT.name())) {
@@ -149,7 +147,7 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
         if (!products.getMerchantId().equals(userId)) {
             return R.error("You are not authorized to delete this product");
         }
-        Boolean result = this.removeById(products);
+        boolean result = this.removeById(products);
         if (!result){
             return R.error("Product delete failed");
         }
@@ -163,8 +161,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
         log.info("======================updateProduct method is called======================");
         log.info("token: {}, products: {}", token, products);
 
-        Long userId = jwtUtil.extractUserId(token);
-        String userRole = jwtUtil.extractRole(token);
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
 
         // 验证用户是否是商家
         if (!userRole.equals(UserRoles.MERCHANT.name())) {
@@ -194,11 +192,10 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     public R<String> setActiveOrInActiveProduct(String token, Long productId, Boolean active) {
         log.info("====================setActiveOrInActiveProduct method is called========================");
         log.info("setActiveOrInActiveProduct:token: {}, productId: {}, active: {}", token, productId, active);
-        Long userId = jwtUtil.extractUserId(token);
-        String userRole = jwtUtil.extractRole(token);
-        log.info("userRole: {}", userRole);
-        log.info("userId: {}", userId);
-        if (userId == null || token == null || productId == null) {
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+
+        if (token == null || productId == null) {
             return R.error("Invalid request");
         }
         if (!UserRoles.MERCHANT.name().equals(userRole))  {
@@ -228,11 +225,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
     public R<Page> getMyProducts(int page,int pageSize,String token,String sortField, String sortOrder) {
         log.info("=========================getMyProducts method is called=======================");
         log.info("token: {}", token);
-        Long userId = jwtUtil.extractUserId(token);
-        log.info("userId: {}", userId);
-        if (userId == null) {
-            return R.error("Invalid request");
-        }
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
         Page<Products> pageInfo = new Page<>(page,pageSize);
 
         LambdaQueryWrapper<Products> productsLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -282,8 +276,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductsMapper, Products> im
         log.info("productId: {}, status: {}", productId, status);
         log.info("token: {}", token);
 
-        String userRole = jwtUtil.extractRole(token);
-        log.info("userRole: {}", userRole);
+        String userRole = jwtUtil.getUserRoleFromToken(token);
+
         if (!userRole.equals(UserRoles.ADMIN.name())) {
             return R.error("hello, you are not admin");
         }
