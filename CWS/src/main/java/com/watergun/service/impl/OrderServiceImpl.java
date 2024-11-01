@@ -398,14 +398,6 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             return R.error("Order cannot be cancelled due to its current status");
         }
 
-        order.setStatus(OrderStatus.CANCELLED);
-        boolean result = this.updateById(order);
-        if (!result) {
-            log.error("订单 {} 取消失败", orderId);
-            return R.error("Order cancellation failed");
-        }
-        log.info("订单 {} 已成功取消", orderId);
-
         // 对订单涉及到的 product 进行库存恢复
         // 获取涉及到的 OrderItems
         LambdaQueryWrapper<OrderItems> orderItemsLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -450,6 +442,14 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             merchantService.modifyPendingAmount(merchants.getMerchantId(), amountToSubtract.negate());
             pendingAmountLogService.modifyPendingAmountLog(merchants.getMerchantId(), amountToSubtract.negate(), "用户取消订单减少待处理金额", "USD");
         }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        boolean result = this.updateById(order);
+        if (!result) {
+            log.error("订单 {} 取消失败", orderId);
+            return R.error("Order cancellation failed");
+        }
+        log.info("订单 {} 已成功取消", orderId);
 
         return R.success("Order cancelled successfully");
     }
