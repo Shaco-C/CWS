@@ -65,7 +65,15 @@ public class OrdersController {
 
     }
     //查看历史订单
-
+    @GetMapping("/getHistoryOrders")
+    public R<Page> getHistoryOrders(HttpServletRequest request,
+                                    @RequestParam(value = "page",defaultValue = "1") int page,
+                                    @RequestParam(value = "pageSize",defaultValue = "1") int pageSize,
+                                    @RequestParam(required = false) String status,
+                                    @RequestParam(required = false) String returnStatus){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.getHistoryOrders(page,pageSize,token,status,returnStatus);
+    }
     //查看订单详情
 
     //取消订单
@@ -80,7 +88,8 @@ public class OrdersController {
     public R<Page> merchantsGetOrders(HttpServletRequest request,
                                       @RequestParam(value = "page", defaultValue = "1")int page,
                                       @RequestParam(value = "pageSize", defaultValue = "1")int pageSize,
-                                      String status, String returnStatus){
+                                      @RequestParam(required = false)String status,
+                                      @RequestParam(required = false)String returnStatus){
         String token = request.getHeader("Authorization").replace("Bearer ", "");
 
         return orderService.merchantsGetOrders(page,pageSize,token,status,returnStatus);

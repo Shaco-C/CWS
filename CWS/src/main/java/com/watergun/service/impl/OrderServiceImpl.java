@@ -92,18 +92,21 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         log.info("========================isOrderBelongsToMerchant 被调用====================");
         return order.getMerchantId().equals(merchantId);
     }
+    
+    /**
+     * 查看订单方法，根据是否是商家查看被购买的订单进行分类讨论
+     * @param status 订单状态
+     * @param returnStatus 订单是否要求退货状态
+     * @param isMerchant 是否为你商家查看自己被购买的订单
+     * @return dtoPage 订单数据
+     * @author CJ
+     */
 
+    // 新增私有方法处理订单查询和分页转换
+    private R<Page> getOrders(int page, int pageSize, String token, String status, String returnStatus, boolean isMerchant) {
+        log.info("======== getOrders 被调用 ========");
+        log.info("参数: page={}, pageSize={}, token={}, status={}, returnStatus={}, isMerchant={}", page, pageSize, token, status, returnStatus, isMerchant);
 
-
-
-    //-------------serviceLogic-----------
-
-    //商家查看属于自己的订单
-    @Override
-    public R<Page> merchantsGetOrders(int page, int pageSize, String token, String status, String returnStatus) {
-        log.info("========================merchantsGetOrders 被调用====================");
-        log.info("getOrders 被调用");
-        log.info("参数: page={}, pageSize={}, token={}, status={}, returnStatus={}", page, pageSize, token, status, returnStatus);
 
         // 校验token是否过期
         if (jwtUtil.isTokenExpired(token)) {
@@ -111,50 +114,49 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             return R.error("token 已过期");
         }
 
-        Long merchantId = jwtUtil.getUserIdFromToken(token);
+        log.info("Token未过期: {}", token);
+
+        Long userId = jwtUtil.getUserIdFromToken(token);
         String userRole = jwtUtil.getUserRoleFromToken(token);
 
-        // 确认用户角色是否为商家
-        log.info("商家ID: {}, 用户角色: {}", merchantId, userRole);
-        if (!UserRoles.MERCHANT.name().equals(userRole)) {
+        // 确认调用者角色是否匹配
+        if (isMerchant && !UserRoles.MERCHANT.name().equals(userRole)) {
             log.warn("非法调用 - 非商家用户尝试调用接口");
             throw new CustomException("非法调用");
         }
 
         // 构建分页对象和查询条件
         Page<Orders> orderPage = new Page<>(page, pageSize);
-        LambdaQueryWrapper<Orders> ordersLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        ordersLambdaQueryWrapper.eq(Orders::getMerchantId, merchantId)
-                .eq(StringUtils.isNotEmpty(status), Orders::getStatus, status)
+        LambdaQueryWrapper<Orders> ordersQueryWrapper = new LambdaQueryWrapper<>();
+
+        if (isMerchant) {
+            ordersQueryWrapper.eq(Orders::getMerchantId, userId);
+        } else {
+            ordersQueryWrapper.eq(Orders::getUserId, userId);
+        }
+
+        ordersQueryWrapper.eq(StringUtils.isNotEmpty(status), Orders::getStatus, status)
                 .eq(StringUtils.isNotEmpty(returnStatus), Orders::getReturnStatus, returnStatus);
 
-        // 分页查询商家的订单数据
-        Page<Orders> paginatedOrders = this.page(orderPage, ordersLambdaQueryWrapper);
-
-        // 获取所有订单ID并进行查询
+        // 分页查询
+        Page<Orders> paginatedOrders = this.page(orderPage, ordersQueryWrapper);
         List<Long> orderIdList = paginatedOrders.getRecords().stream()
                 .map(Orders::getOrderId)
                 .distinct()
                 .toList();
 
-        // 检查是否有订单ID，避免空列表查询错误
         if (orderIdList.isEmpty()) {
             log.info("没有符合条件的订单");
-            // 返回空的分页数据
-            Page<OrderDTO> emptyPage = new Page<>(page, pageSize);
-            return R.success(emptyPage);
+            return R.success(new Page<>(page, pageSize));
         }
+        log.info("符合条件的订单ID列表: {}", orderIdList);
 
         // 查询订单详情
-        LambdaQueryWrapper<OrderItems> orderItemsLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        orderItemsLambdaQueryWrapper.in(OrderItems::getOrderId, orderIdList);
-        List<OrderItems> orderItemsList = orderItemsService.list(orderItemsLambdaQueryWrapper);
-
-        // 将同一个 orderId 的 OrderItems 分组放入 map
+        List<OrderItems> orderItemsList = orderItemsService.list(
+                new LambdaQueryWrapper<OrderItems>().in(OrderItems::getOrderId, orderIdList));
         Map<Long, List<OrderItems>> orderItemsMap = orderItemsList.stream()
                 .collect(Collectors.groupingBy(OrderItems::getOrderId));
 
-        // 转换为 OrderDTO 并关联订单详情
         List<OrderDTO> orderDTOList = paginatedOrders.getRecords().stream()
                 .map(order -> {
                     OrderDTO orderDTO = new OrderDTO(order);
@@ -162,14 +164,33 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                     return orderDTO;
                 }).toList();
 
-        // 创建新的 Page 对象用于返回
         Page<OrderDTO> dtoPage = new Page<>(page, pageSize);
         dtoPage.setRecords(orderDTOList);
-        dtoPage.setTotal(paginatedOrders.getTotal()); // 保留分页查询总数
+        dtoPage.setTotal(paginatedOrders.getTotal());
         dtoPage.setCurrent(paginatedOrders.getCurrent());
         dtoPage.setSize(paginatedOrders.getSize());
-
+        log.info("查询完毕");
         return R.success(dtoPage);
+    }
+
+
+    //-------------serviceLogic-----------
+
+    //商家查看属于自己的订单
+    // 商家查看待处理订单
+    @Override
+    public R<Page> merchantsGetOrders(int page, int pageSize, String token, String status, String returnStatus) {
+        log.info("=========================调用 merchantsGetOrders方法=========================");
+        log.info("商家查看待处理订单");
+        return getOrders(page, pageSize, token, status, returnStatus, true);
+    }
+
+    // 用户查看历史订单
+    @Override
+    public R<Page> getHistoryOrders(int page, int pageSize, String token, String status, String returnStatus) {
+        log.info("=========================调用 getHistoryOrders方法=========================");
+        log.info("用户查看历史订单");
+        return getOrders(page, pageSize, token, status, returnStatus, false);
     }
 
     // 创建订单  用户下单

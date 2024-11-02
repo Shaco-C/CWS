@@ -16,7 +16,11 @@ public interface OrderService extends IService<Orders> {
 
 
     //------------serviceLogic---------
+    //商家查看被售卖的订单
     R<Page> merchantsGetOrders(int page, int pageSize, String token, String status, String returnStatus);
+
+    //用户查看购买的订单
+    R<Page> getHistoryOrders(int page, int pageSize, String token, String status, String returnStatus);
 
     //创建订单
     R<List<Long>> createOrder(String token, List<Long>  productIds, Map<Long, Integer>  quantities,Long addressId);
