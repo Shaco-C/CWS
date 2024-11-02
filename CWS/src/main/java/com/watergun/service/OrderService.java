@@ -3,6 +3,7 @@ package com.watergun.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.watergun.common.R;
+import com.watergun.dto.OrdersDTO;
 import com.watergun.entity.Orders;
 
 import java.util.List;
@@ -21,6 +22,9 @@ public interface OrderService extends IService<Orders> {
 
     //用户查看购买的订单
     R<Page> getHistoryOrders(int page, int pageSize, String token, String status, String returnStatus);
+
+    //查看订单详情
+    R<OrdersDTO> getOrderDetail(String token, Long orderId);
 
     //创建订单
     R<List<Long>> createOrder(String token, List<Long>  productIds, Map<Long, Integer>  quantities,Long addressId);

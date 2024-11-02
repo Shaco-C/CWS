@@ -6,7 +6,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.watergun.common.CustomException;
 import com.watergun.common.R;
-import com.watergun.dto.OrderDTO;
+import com.watergun.dto.OrdersDTO;
+import com.watergun.dto.ProductDTO;
 import com.watergun.entity.*;
 import com.watergun.enums.*;
 import com.watergun.mapper.OrdersMapper;
@@ -107,13 +108,11 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         log.info("======== getOrders 被调用 ========");
         log.info("参数: page={}, pageSize={}, token={}, status={}, returnStatus={}, isMerchant={}", page, pageSize, token, status, returnStatus, isMerchant);
 
-
         // 校验token是否过期
         if (jwtUtil.isTokenExpired(token)) {
             log.warn("Token已过期: {}", token);
             return R.error("token 已过期");
         }
-
         log.info("Token未过期: {}", token);
 
         Long userId = jwtUtil.getUserIdFromToken(token);
@@ -128,19 +127,15 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         // 构建分页对象和查询条件
         Page<Orders> orderPage = new Page<>(page, pageSize);
         LambdaQueryWrapper<Orders> ordersQueryWrapper = new LambdaQueryWrapper<>();
-
-        if (isMerchant) {
-            ordersQueryWrapper.eq(Orders::getMerchantId, userId);
-        } else {
-            ordersQueryWrapper.eq(Orders::getUserId, userId);
-        }
-
-        ordersQueryWrapper.eq(StringUtils.isNotEmpty(status), Orders::getStatus, status)
+        ordersQueryWrapper.eq(isMerchant, Orders::getMerchantId, userId)
+                .eq(!isMerchant, Orders::getUserId, userId)
+                .eq(StringUtils.isNotEmpty(status), Orders::getStatus, status)
                 .eq(StringUtils.isNotEmpty(returnStatus), Orders::getReturnStatus, returnStatus);
 
         // 分页查询
         Page<Orders> paginatedOrders = this.page(orderPage, ordersQueryWrapper);
-        List<Long> orderIdList = paginatedOrders.getRecords().stream()
+        List<Orders> ordersList = paginatedOrders.getRecords();
+        List<Long> orderIdList = ordersList.stream()
                 .map(Orders::getOrderId)
                 .distinct()
                 .toList();
@@ -151,27 +146,68 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         }
         log.info("符合条件的订单ID列表: {}", orderIdList);
 
+        // 提取所有 merchantId
+        List<Long> merchantIds = ordersList.stream()
+                .map(Orders::getMerchantId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 批量查询所有相关商家信息
+        Map<Long, Merchants> merchantsMap = merchantService.listByIds(merchantIds).stream()
+                .collect(Collectors.toMap(Merchants::getMerchantId, merchant -> merchant));
+
         // 查询订单详情
         List<OrderItems> orderItemsList = orderItemsService.list(
                 new LambdaQueryWrapper<OrderItems>().in(OrderItems::getOrderId, orderIdList));
         Map<Long, List<OrderItems>> orderItemsMap = orderItemsList.stream()
                 .collect(Collectors.groupingBy(OrderItems::getOrderId));
 
-        List<OrderDTO> orderDTOList = paginatedOrders.getRecords().stream()
+        // 提取所有ProductId并查询产品信息
+        List<Long> productIdList = orderItemsList.stream()
+                .map(OrderItems::getProductId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, Products> productsMap = productService.getProductsByIds(productIdList).stream()
+                .collect(Collectors.toMap(Products::getProductId, product -> product));
+
+        // 根据OrderId将Product整合到一起
+        Map<Long, List<ProductDTO>> orderItemsProductMap = orderItemsList.stream()
+                .collect(Collectors.groupingBy(OrderItems::getOrderId,
+                        Collectors.mapping(orderItem -> {
+                            Products product = productsMap.get(orderItem.getProductId());
+                            if (product != null) {
+                                Merchants merchants = merchantsMap.get(product.getMerchantId());
+                                // 创建 ProductDTO，并设置 quantity
+                                ProductDTO productDTO = new ProductDTO(product);
+                                productDTO.setQuantity(orderItem.getQuantity());
+                                if (merchants != null) {
+                                    productDTO.setShopName(merchants.getShopName());
+                                    productDTO.setAddress(merchants.getAddress());
+                                    productDTO.setShopAvatarUrl(merchants.getShopAvatarUrl());
+                                }
+                                return productDTO;
+                            }
+                            return null;
+                        }, Collectors.toList())));
+
+        // 整合成OrdersDTO
+        List<OrdersDTO> ordersDTOList = paginatedOrders.getRecords().stream()
                 .map(order -> {
-                    OrderDTO orderDTO = new OrderDTO(order);
-                    orderDTO.setOrderItemsList(orderItemsMap.get(order.getOrderId()));
-                    return orderDTO;
+                    OrdersDTO ordersDTO = new OrdersDTO(order);
+                    ordersDTO.setProductDTOList(orderItemsProductMap.get(order.getOrderId()));
+                    return ordersDTO;
                 }).toList();
 
-        Page<OrderDTO> dtoPage = new Page<>(page, pageSize);
-        dtoPage.setRecords(orderDTOList);
+        Page<OrdersDTO> dtoPage = new Page<>(page, pageSize);
+        dtoPage.setRecords(ordersDTOList);
         dtoPage.setTotal(paginatedOrders.getTotal());
         dtoPage.setCurrent(paginatedOrders.getCurrent());
         dtoPage.setSize(paginatedOrders.getSize());
         log.info("查询完毕");
         return R.success(dtoPage);
     }
+
 
 
     //-------------serviceLogic-----------
@@ -192,6 +228,77 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         log.info("用户查看历史订单");
         return getOrders(page, pageSize, token, status, returnStatus, false);
     }
+
+    // 查看订单详情
+    @Override
+    public R<OrdersDTO> getOrderDetail(String token, Long orderId) {
+        log.info("========================= 调用 getOrderDetail 方法 =========================");
+        log.info("查看订单详情，订单ID: {}", orderId);
+
+        // 获取用户ID
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        log.info("用户ID: {}", userId);
+
+        // 查询订单
+        Orders order = this.getById(orderId);
+        if (order == null) {
+            log.error("订单不存在，订单ID: {}", orderId);
+            return R.error("Order not found");
+        }
+
+        // 校验订单是否属于当前用户
+        if (!order.getUserId().equals(userId)) {
+            log.error("订单不属于用户，订单ID: {}", orderId);
+            return R.error("Invalid order ID");
+        }
+
+        // 获取商家信息
+        Merchants merchants = merchantService.getById(order.getMerchantId());
+        log.info("商家信息: {}", merchants);
+
+        // 查询该订单的所有订单项
+        LambdaQueryWrapper<OrderItems> orderItemsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        orderItemsLambdaQueryWrapper.eq(OrderItems::getOrderId, orderId);
+
+        List<OrderItems> orderItemsList = orderItemsService.list(orderItemsLambdaQueryWrapper);
+        if (orderItemsList.isEmpty()) {
+            log.error("未找到订单详情，订单ID: {}", orderId);
+            return R.error("Order details error");
+        }
+        log.info("找到订单项数量: {}", orderItemsList.size());
+
+        // 提取所有产品ID并计算每个产品的数量
+        List<Long> productIds = orderItemsList.stream()
+                .map(OrderItems::getProductId)
+                .distinct()
+                .toList();
+
+        // 使用 Map 存储每个产品的数量
+        Map<Long, Integer> quantities = orderItemsList.stream()
+                .collect(Collectors.toMap(OrderItems::getProductId, OrderItems::getQuantity));
+
+        // 批量查询所有相关产品信息
+        List<Products> products = productService.getProductsByIds(productIds);
+        log.info("找到产品数量: {}", products.size());
+
+        // 将产品信息转换为 ProductDTO，并设置数量和商家信息
+        List<ProductDTO> productDTOList = products.stream().map(product -> {
+            ProductDTO productDTO = new ProductDTO(product);
+            productDTO.setQuantity(quantities.get(product.getProductId()));
+            productDTO.setShopName(merchants.getShopName());
+            productDTO.setAddress(merchants.getAddress());
+            productDTO.setShopAvatarUrl(merchants.getShopAvatarUrl());
+            return productDTO;
+        }).toList();
+
+        // 创建 OrdersDTO 并设置产品列表
+        OrdersDTO ordersDTO = new OrdersDTO(order);
+        ordersDTO.setProductDTOList(productDTOList);
+
+        log.info("订单详情查询成功，返回订单DTO: {}", ordersDTO);
+        return R.success(ordersDTO);
+    }
+
 
     // 创建订单  用户下单
     @Override

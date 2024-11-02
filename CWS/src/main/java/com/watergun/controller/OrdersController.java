@@ -2,6 +2,7 @@ package com.watergun.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.watergun.common.R;
+import com.watergun.dto.OrdersDTO;
 import com.watergun.dto.requestDTO.CreateOrderRequest;
 import com.watergun.dto.requestDTO.PayOrderRequest;
 import com.watergun.service.OrderService;
@@ -74,7 +75,13 @@ public class OrdersController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return orderService.getHistoryOrders(page,pageSize,token,status,returnStatus);
     }
+
     //查看订单详情
+    @GetMapping("/getOrderDetail")
+    public R<OrdersDTO> getOrderDetail(HttpServletRequest request, @RequestParam Long orderId){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.getOrderDetail(token,orderId);
+    }
 
     //取消订单
 
