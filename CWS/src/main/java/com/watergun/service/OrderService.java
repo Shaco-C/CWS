@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.watergun.common.R;
 import com.watergun.dto.OrdersDTO;
+import com.watergun.dto.requestDTO.RefundRequest;
 import com.watergun.entity.Orders;
 
 import java.util.List;
@@ -45,4 +46,10 @@ public interface OrderService extends IService<Orders> {
 
     //用户收货方法
     R<String> receivedProduct(String token,Long orderId);
+
+    //用户申请退货
+    R<String> userReturnProductApplication(String token, RefundRequest returnRequest);
+
+    //商家处理退货申请
+    R<String> merchantsHandleReturnRequest(String token,Long orderId,String status);
 }

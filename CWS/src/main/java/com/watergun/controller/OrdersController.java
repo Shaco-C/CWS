@@ -5,6 +5,7 @@ import com.watergun.common.R;
 import com.watergun.dto.OrdersDTO;
 import com.watergun.dto.requestDTO.CreateOrderRequest;
 import com.watergun.dto.requestDTO.PayOrderRequest;
+import com.watergun.dto.requestDTO.RefundRequest;
 import com.watergun.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -83,11 +84,27 @@ public class OrdersController {
         return orderService.getOrderDetail(token,orderId);
     }
 
-    //取消订单
-
     //用户申请退货
+    @PutMapping("/refundApplication")
+    public R<String> userReturnProduct(HttpServletRequest request, @RequestBody RefundRequest refundRequest){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.userReturnProductApplication(token,refundRequest);
+    }
 
     //商家处理退货
+    @PutMapping("/merchants/handleRequest")
+    public R<String> merchantsHandleReturnRequest(HttpServletRequest request,
+                                                  @RequestParam Long orderId,
+                                                  @RequestParam String status){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.merchantsHandleReturnRequest(token,orderId,status);
+    }
+
+    //用户查看退货申请
+
+    //商家查看待处理退货请求
+
+    //用户进行退货
 
     //--------------商家方法---------------
     //商家查看自己订单

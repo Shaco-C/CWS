@@ -35,6 +35,7 @@ public class Orders {
 
     private String paymentMethod;
     private String shippingInfo;
+    private String returnReason;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

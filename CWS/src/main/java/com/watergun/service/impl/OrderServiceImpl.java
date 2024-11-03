@@ -8,6 +8,7 @@ import com.watergun.common.CustomException;
 import com.watergun.common.R;
 import com.watergun.dto.OrdersDTO;
 import com.watergun.dto.ProductDTO;
+import com.watergun.dto.requestDTO.RefundRequest;
 import com.watergun.entity.*;
 import com.watergun.enums.*;
 import com.watergun.mapper.OrdersMapper;
@@ -401,7 +402,6 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                 OrderItems orderDetails = new OrderItems();
                 orderDetails.setOrderId(order.getOrderId());
                 orderDetails.setProductId(product.getProductId());
-                orderDetails.setReturnStatus(OrderItemsReturnStatus.NOT_REQUESTED);
                 orderDetails.setQuantity(quantity);
                 orderDetails.setPrice(product.getPrice());
                 orderDetailsList.add(orderDetails);
@@ -726,5 +726,88 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
                 "用户确认收货，确认金额增加", orders.getCurrency());
         log.info("订单 {} 已成功收货，商家待确认金额已添加到确认金额中", orderId);
         return R.success("Order received successfully");
+    }
+
+    @Override
+    public R<String> userReturnProductApplication(String token, RefundRequest returnRequest) {
+        log.info("======================userReturnProductApplication======================");
+
+        Long userId = jwtUtil.getUserIdFromToken(token);
+        log.info("user{} apply for return", userId);
+        if (!Objects.equals(returnRequest.getUserId(), userId)) {
+            log.info("用户 {} 无权限申请退货", userId);
+            return R.error("User does not have permission to apply for return");
+        }
+
+        Orders orders = this.getById(returnRequest.getOrderId());
+
+        if (orders == null){
+            log.info("订单 {} 不存在", returnRequest.getOrderId());
+            return R.error("Order does not found");
+        }
+
+        if (!orders.getStatus().equals(OrderStatus.RECEIVED)&&!orders.getStatus().equals(OrderStatus.IN_TRANSIT)){
+            log.info("订单 {} 状态不是已送达或运输中", returnRequest.getOrderId());
+            return R.error("Order status is not delivered or in transit");
+        }
+
+        if (!orders.getReturnStatus().equals(OrdersReturnStatus.NOT_REQUESTED)){
+            log.info("订单 {} 已经申请退货", returnRequest.getOrderId());
+            return R.error("Order has already applied for return");
+        }
+
+        orders.setReturnStatus(OrdersReturnStatus.REQUESTED);
+        orders.setReturnReason(returnRequest.getReturnReason());
+
+        log.info("orders:{}",orders);
+        boolean result = this.updateById(orders);
+
+        if (!result){
+            log.error("Failed to apply for return");
+            return R.error("Failed to apply for return");
+        }
+        log.info("Return application submitted successfully");
+        return R.success("Return application submitted successfully");
+    }
+
+    @Override
+    public R<String> merchantsHandleReturnRequest(String token, Long orderId, String status) {
+        log.info("======================merchantsHandleReturnRequest======================");
+
+        Long merchantId = jwtUtil.getUserIdFromToken(token);
+        log.info("merchant{} handle return request{}", merchantId,orderId);
+
+        if (!status.equals(OrdersReturnStatus.REJECTED.name())&&!status.equals(OrdersReturnStatus.APPROVED.name())){
+            log.info("退货状态 {} 不合法", status);
+            return R.error("Return status is not valid");
+        }
+
+        String userRole = jwtUtil.extractRole(token);
+        if (!UserRoles.MERCHANT.name().equals(userRole)){
+            log.info("用户 {} 无权限处理退货请求", merchantId);
+            return R.error("User does not have permission to handle return request");
+        }
+        Orders orders = this.getById(orderId);
+        if (orders == null){
+            log.info("订单 {} 不存在", orderId);
+            return R.error("Order does not found");
+        }
+
+        if (!orders.getReturnStatus().equals(OrdersReturnStatus.REQUESTED)){
+            log.info("订单已处理，或无需处理");
+            return R.error("Order has been processed or does not need to be processed");
+        }
+        if (status.equals(OrdersReturnStatus.REJECTED.name())){
+            orders.setReturnStatus(OrdersReturnStatus.REJECTED);
+        }else{
+            orders.setReturnStatus(OrdersReturnStatus.APPROVED);
+        }
+        boolean result = this.updateById(orders);
+        if (!result){
+            log.error("Failed to handle return request");
+            return R.error("Failed to handle return request");
+        }
+        log.info("Return request handled successfully");
+        return R.success("Return request handled successfully");
     }
 }

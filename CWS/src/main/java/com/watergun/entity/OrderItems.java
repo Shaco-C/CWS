@@ -1,6 +1,5 @@
 package com.watergun.entity;
 import com.baomidou.mybatisplus.annotation.*;
-import com.watergun.enums.OrderItemsReturnStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,9 +19,6 @@ public class OrderItems {
     private Long orderId;
     private Long productId;
     private Integer quantity;
-
-    @Enumerated(value = EnumType.STRING)
-    private OrderItemsReturnStatus returnStatus;
 
     private BigDecimal price;
 
