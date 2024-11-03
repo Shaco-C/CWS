@@ -366,7 +366,7 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             order.setUserId(userId);
             order.setMerchantId(merchantId); // 设置商家 ID
             order.setAddressId(addressId); // 设置用户的收货地址 ID
-            order.setTotalAmount(totalAmount);
+            order.setTotalAmount(totalAmount);//商品总金额
             order.setStatus(OrderStatus.PENDING_PAYMENT); // 设置订单状态为待支付，等待用户调用支付接口
             order.setReturnStatus(OrdersReturnStatus.NOT_REQUESTED); // 设置退货状态为未申请
             order.setTaxAmount(BigDecimal.ZERO); // 暂时设置默认税额为 0 元
@@ -622,6 +622,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         return R.success("Order shipped successfully");
     }
 
+
+    //模拟快递员送货方法
     @Override
     public R<String> transitProduct(Long orderId) {
         log.info("======================transitProduct======================");
@@ -728,6 +730,8 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         return R.success("Order received successfully");
     }
 
+
+    //用户申请退货
     @Override
     public R<String> userReturnProductApplication(String token, RefundRequest returnRequest) {
         log.info("======================userReturnProductApplication======================");
@@ -746,9 +750,9 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
             return R.error("Order does not found");
         }
 
-        if (!orders.getStatus().equals(OrderStatus.RECEIVED)&&!orders.getStatus().equals(OrderStatus.IN_TRANSIT)){
-            log.info("订单 {} 状态不是已送达或运输中", returnRequest.getOrderId());
-            return R.error("Order status is not delivered or in transit");
+        if (!orders.getStatus().equals(OrderStatus.IN_TRANSIT)){
+            log.info("订单 {} 只有在非收货的情况下才能够申请退货", returnRequest.getOrderId());
+            return R.error("Order status is not in right status to apply for return");
         }
 
         if (!orders.getReturnStatus().equals(OrdersReturnStatus.NOT_REQUESTED)){
@@ -770,6 +774,91 @@ public class OrderServiceImpl extends ServiceImpl<OrdersMapper, Orders> implemen
         return R.success("Return application submitted successfully");
     }
 
+    //用户进行退货（在退货请求审核通过后，对应订单return_status状态为APPROVED）
+    @Override
+    @Transactional
+    public R<String> userRefundProducts(String token, Long orderId) {
+        log.info("======================userRefundProducts======================");
+        Long userId = jwtUtil.getUserIdFromToken(token);
+
+        // 1. 验证订单存在性和用户权限
+        Orders orders = this.getById(orderId);
+        if (orders == null) {
+            log.info("订单 {} 不存在", orderId);
+            return R.error("Order does not found");
+        }
+        if (!orders.getUserId().equals(userId)) {
+            log.info("用户 {} 无权限进行退货", userId);
+            return R.error("User does not have permission to return products");
+        }
+        if (!orders.getReturnStatus().equals(OrdersReturnStatus.APPROVED)) {
+            log.info("订单 {} 退货状态不是已批准", orderId);
+            return R.error("Return status is not approved");
+        }
+        if (!orders.getStatus().equals(OrderStatus.IN_TRANSIT)) {
+            log.info("订单 {} 状态不对", orderId);
+            return R.error("Order status is not delivered or in transit");
+        }
+
+        // 2. 更新商家的待确认金额
+        Merchants merchants = merchantService.getById(orders.getMerchantId());
+        if (merchants == null) {
+            log.info("商家 {} 不存在", orders.getMerchantId());
+            return R.error("Merchant does not found");
+        }
+        merchants.setPendingBalance(merchants.getPendingBalance().subtract(orders.getTotalAmount()));
+        boolean merchantResult = merchantService.updateById(merchants);
+        pendingAmountLogService.modifyPendingAmountLog(
+                merchants.getMerchantId(),
+                orders.getTotalAmount().negate(),
+                "用户退货，待确认金额退回",
+                orders.getCurrency()
+        );
+        if (!merchantResult) {
+            log.error("Failed to update merchant's pending balance");
+            return R.error("Failed to update merchant's pending balance");
+        }
+
+        // 3. 更新产品库存和销量
+        LambdaQueryWrapper<OrderItems> orderItemsLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        orderItemsLambdaQueryWrapper.eq(OrderItems::getOrderId, orderId);
+        List<OrderItems> orderItemsList = orderItemsService.list(orderItemsLambdaQueryWrapper);
+
+        Map<Long, Integer> productSalesNumMap = orderItemsList.stream()
+                .collect(Collectors.toMap(OrderItems::getProductId, OrderItems::getQuantity));
+
+        List<Long> productIds = new ArrayList<>(productSalesNumMap.keySet());
+        List<Products> productsList = productService.listByIds(productIds);
+
+        productsList.forEach(product -> {
+            Integer quantity = productSalesNumMap.get(product.getProductId());
+            if (quantity != null) {
+                product.setSales(product.getSales() - quantity);
+                product.setStock(product.getStock() + quantity);
+            }
+        });
+
+        boolean productResult = productService.updateBatchById(productsList);
+        if (!productResult) {
+            log.error("Failed to update product's stock and sales");
+            return R.error("Failed to update product's stock and sales");
+        }
+
+        // 4. 更新订单的退货状态
+        orders.setReturnStatus(OrdersReturnStatus.RETURNED);
+        String msg = orders.getShippingInfo()+"\n "+LocalDateTime.now()+": 商品已被退货";
+        boolean orderResult = this.updateById(orders);
+        if (!orderResult) {
+            log.error("Failed to update order's status");
+            return R.error("Failed to update order's status");
+        }
+
+        return R.success("Return products successfully");
+    }
+
+
+
+    //商家处理退货申请
     @Override
     public R<String> merchantsHandleReturnRequest(String token, Long orderId, String status) {
         log.info("======================merchantsHandleReturnRequest======================");

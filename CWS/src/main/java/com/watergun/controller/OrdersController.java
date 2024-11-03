@@ -90,24 +90,17 @@ public class OrdersController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return orderService.userReturnProductApplication(token,refundRequest);
     }
-
-    //商家处理退货
-    @PutMapping("/merchants/handleRequest")
-    public R<String> merchantsHandleReturnRequest(HttpServletRequest request,
-                                                  @RequestParam Long orderId,
-                                                  @RequestParam String status){
+    //用户进行退货（在退货请求审核通过后，对应订单return_status状态为APPROVED）
+    @PutMapping("/refundProduct")
+    public R<String> userRefundProducts(HttpServletRequest request,@RequestParam Long orderId){
         String token = request.getHeader("Authorization").replace("Bearer ", "");
-        return orderService.merchantsHandleReturnRequest(token,orderId,status);
+        return orderService.userRefundProducts(token,orderId);
     }
 
-    //用户查看退货申请
-
-    //商家查看待处理退货请求
-
-    //用户进行退货
 
     //--------------商家方法---------------
-    //商家查看自己订单
+    //商家查看自己订单 （待发货、已发货、已完成）(退货请求)
+    //商家查看待处理退货请求
     @GetMapping("/merchants/getOrders")
     public R<Page> merchantsGetOrders(HttpServletRequest request,
                                       @RequestParam(value = "page", defaultValue = "1")int page,
@@ -124,4 +117,13 @@ public class OrdersController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return orderService.merchantsShipppedProduct(token,orderId);
     }
+    //商家审核退货请求
+    @PutMapping("/merchants/handleRequest")
+    public R<String> merchantsHandleReturnRequest(HttpServletRequest request,
+                                                  @RequestParam Long orderId,
+                                                  @RequestParam String status){
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        return orderService.merchantsHandleReturnRequest(token,orderId,status);
+    }
+
 }

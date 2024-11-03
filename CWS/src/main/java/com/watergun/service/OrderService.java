@@ -18,8 +18,7 @@ public interface OrderService extends IService<Orders> {
 
 
     //------------serviceLogic---------
-    //商家查看被售卖的订单
-    R<Page> merchantsGetOrders(int page, int pageSize, String token, String status, String returnStatus);
+
 
     //用户查看购买的订单
     R<Page> getHistoryOrders(int page, int pageSize, String token, String status, String returnStatus);
@@ -36,19 +35,30 @@ public interface OrderService extends IService<Orders> {
     //用户取消订单
     R<String> cancelOrder(String token,Long orderId);
 
-    //商家发货
-    R<String> merchantsShipppedProduct(String token,Long orderId);
+    //用户收货方法
+    R<String> receivedProduct(String token,Long orderId);
+
+    //用户申请退货
+    R<String> userReturnProductApplication(String token, RefundRequest returnRequest);
+
+    //用户进行退货
+    R<String> userRefundProducts(String token,Long orderId);
+
+    //----------
+
     //模拟快递员送货方法
     R<String> transitProduct(Long orderId);
 
     //模拟快递送达目的地方法
     R<String> deliveredProduct(Long orderId);
 
-    //用户收货方法
-    R<String> receivedProduct(String token,Long orderId);
+    //----------
 
-    //用户申请退货
-    R<String> userReturnProductApplication(String token, RefundRequest returnRequest);
+    //商家查看被售卖的订单
+    R<Page> merchantsGetOrders(int page, int pageSize, String token, String status, String returnStatus);
+
+    //商家发货
+    R<String> merchantsShipppedProduct(String token,Long orderId);
 
     //商家处理退货申请
     R<String> merchantsHandleReturnRequest(String token,Long orderId,String status);
