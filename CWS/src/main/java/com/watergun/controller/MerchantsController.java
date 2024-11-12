@@ -47,11 +47,4 @@ public class MerchantsController {
         String token = request.getHeader("Authorization").replace("Bearer ", "");
         return merchantService.deleteMerchant(token);
     }
-
-
-    //查看商店特定日期范围的营业额
-
-    //处理退货请求
-
-
 }

@@ -126,4 +126,8 @@ public class OrdersController {
         return orderService.merchantsHandleReturnRequest(token,orderId,status);
     }
 
+    //查看商店特定日期范围的营业额
+
+    //最近七日的营业额Echars图
+
 }
