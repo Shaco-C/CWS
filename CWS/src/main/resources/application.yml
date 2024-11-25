@@ -4,8 +4,8 @@ spring:
   application:
     name: "CWS"
   datasource:
-    url: jdbc:mysql://localhost:3306/crossworldshop
-    username: root
+    url: jdbc:mysql://159.138.23.239:3306/crossworldshop
+    username: chuxuebushi
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
 
