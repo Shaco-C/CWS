@@ -1,3 +1,4 @@
+CWS项目是一套电商系统，目前只有后台管理系统，基于Spring Boot+MyBatisPlus+jwt实现。
 ### **数据库设计概要**
 
 ---
